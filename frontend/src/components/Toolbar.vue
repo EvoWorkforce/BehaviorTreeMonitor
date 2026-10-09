@@ -2,13 +2,8 @@
   <header class="toolbar">
     <div class="toolbar-left">
       <div class="toolbar-title">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path
-            d="M12 3L12 8M12 8L6 14M12 8L18 14M6 14L6 21M18 14L18 21M6 14L3 21M6 14L9 21M18 14L15 21M18 14L21 21"
-            stroke="currentColor" stroke-width="2" stroke-linecap="round"
-          />
-        </svg>
-        <span>BehaviorTree Monitor</span>
+        <img src="/favicon.svg" alt="Evo" class="toolbar-logo" />
+        <span>Evo Behavior Tree Monitor</span>
       </div>
     </div>
 

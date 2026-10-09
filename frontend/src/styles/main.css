@@ -192,7 +192,7 @@ html, body {
 
 .btn-icon { padding: 6px 8px; }
 .btn svg { width: 16px; height: 16px; }
-.toolbar-title svg { color: var(--connection-color); }
+.toolbar-logo { width: 24px; height: 24px; display: block; }
 
 /* Blackboard rail */
 .blackboard-rail { padding: 0 0 8px; font-size: 12px; }
