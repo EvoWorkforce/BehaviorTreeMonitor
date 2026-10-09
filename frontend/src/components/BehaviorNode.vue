@@ -1,7 +1,7 @@
 <template>
   <g
     class="node-group"
-    :class="[statusClass, typeClass, { 'is-subtree': props.node.isSubtreeContainer }]"
+    :class="[statusClass, typeClass, { 'is-subtree': props.node.isSubtreeContainer, 'is-match': props.highlighted }]"
     :transform="`translate(${props.node.x}, ${props.node.y})`"
     @mouseenter="$emit('mouseenter', $event, props.node)"
     @mouseleave="$emit('mouseleave')"
@@ -97,7 +97,7 @@ import { describeNull, resolvePortValue } from '@/lib/blackboard'
 import { summarize } from '@/lib/format'
 import { useTreeStore, getNodePorts, getNodeHeight, measureTextWidth } from '@/stores/treeStore'
 
-const props = defineProps<{ node: TreeNode }>()
+const props = defineProps<{ node: TreeNode; highlighted?: boolean }>()
 defineEmits<{
   mouseenter: [event: MouseEvent, node: TreeNode]
   mouseleave: []

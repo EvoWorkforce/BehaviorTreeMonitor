@@ -19,6 +19,7 @@
           :root-label="store.instances.treeId"
           @select="onSelectInstance"
         />
+        <SearchBar v-model:follow="follow" :root="store.treeData" :statuses="store.nodeStatuses" @update:match-uids="matchUids = $event" @pan-to="panToNode" />
         <div class="canvas-bg"></div>
 
         <!-- Status counts -->
@@ -69,6 +70,7 @@
                 v-for="node in visibleNodes"
                 :key="node.uid"
                 :node="node"
+                :highlighted="matchUids.has(node.uid)"
                 @mouseenter="showTooltip"
                 @mouseleave="hideTooltip"
                 @toggle-subtree="onToggleSubtree"
@@ -125,6 +127,7 @@ import BehaviorNode from './components/BehaviorNode.vue'
 import Toolbar from './components/Toolbar.vue'
 import InstanceRail from './components/InstanceRail.vue'
 import Breadcrumb from './components/Breadcrumb.vue'
+import SearchBar from './components/SearchBar.vue'
 import BlackboardRail from './components/BlackboardRail.vue'
 import IconPlus from './components/icons/IconPlus.vue'
 import IconMinus from './components/icons/IconMinus.vue'
@@ -260,8 +263,20 @@ const panY = ref(0)
 const isDragging = ref(false)
 const lastMouse = reactive({ x: 0, y: 0 })
 
+// Search and follow: centre a node; a manual pan or zoom turns follow off.
+const follow = ref(false)
+const matchUids = ref<Set<string>>(new Set())
+
+function panToNode(node: TreeNode) {
+  const rect = containerRef.value?.getBoundingClientRect()
+  if (!rect) return
+  panX.value = rect.width / 2 - (node.x + node.width / 2) * zoom.value
+  panY.value = rect.height / 2 - (node.y + getNodeHeight(node) / 2) * zoom.value
+}
+
 function onMouseDown(e: MouseEvent) {
   if (e.button === 0) {
+    follow.value = false
     isDragging.value = true
     lastMouse.x = e.clientX
     lastMouse.y = e.clientY
@@ -282,6 +297,7 @@ function onMouseUp() {
 }
 
 function onWheel(e: WheelEvent) {
+  follow.value = false
   const delta = e.deltaY > 0 ? 0.9 : 1.1
   const newZoom = Math.max(0.1, Math.min(3, zoom.value * delta))
   const rect = canvasRef.value!.getBoundingClientRect()

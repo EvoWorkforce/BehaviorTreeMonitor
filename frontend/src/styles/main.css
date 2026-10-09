@@ -217,3 +217,11 @@ html, body {
 .bb-key { color: var(--text-secondary); }
 .port-live { fill: var(--connection-color); font-family: var(--font-mono); font-size: 8px; }
 .port-live.null { fill: var(--text-muted); }
+
+/* Search and follow */
+.search-bar { position: absolute; top: 12px; right: 12px; z-index: 5; display: flex; align-items: center; gap: 8px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 12px; color: var(--text-secondary); }
+.search-input { width: 180px; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 4px; padding: 4px 8px; color: var(--text-primary); font: inherit; }
+.search-input:focus { outline: none; border-color: var(--connection-color); }
+.search-count { color: var(--text-muted); font-family: var(--font-mono); }
+.follow-toggle { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+.node-group.is-match .node-box { stroke: var(--connection-color); stroke-width: 3; filter: drop-shadow(0 0 6px var(--connection-glow)); }
