@@ -6,6 +6,7 @@ import {
   NODE_BASE_HEIGHT, PORT_HEIGHT,
 } from '@/lib/parse'
 import type { ParseContext } from '@/lib/parse'
+import { collectOwnUids } from '@/lib/blackboard'
 import { buildInstanceTree } from '@/lib/instances'
 import type { InstanceNode } from '@/lib/instances'
 
@@ -23,6 +24,9 @@ export const useTreeStore = defineStore('tree', () => {
   const nodeStatuses: Record<string, string> = reactive({})
   const instances = ref<InstanceNode | null>(null)
   const selectedPath = ref('')
+
+  /** Uids parsed directly from the selected block; inline-expanded SubTree children are excluded. */
+  const ownUids = computed(() => (treeData.value ? collectOwnUids(treeData.value) : new Set<string>()))
 
   const stats = computed(() => {
     const r = { idle: 0, running: 0, success: 0, failure: 0 }
@@ -236,7 +240,7 @@ export const useTreeStore = defineStore('tree', () => {
 
   return {
     connected, connecting, host, port, horizontal,
-    treeData, nodeStatuses, stats, instances, selectedPath,
+    treeData, ownUids, nodeStatuses, stats, instances, selectedPath,
     parseTree, selectInstance, updateStatus, toggleLayout, toggleSubtree,
     NODE_BASE_HEIGHT,
     PORT_HEIGHT,

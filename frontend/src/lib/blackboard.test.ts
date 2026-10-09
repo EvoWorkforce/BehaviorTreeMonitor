@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
   bbNameForPath, describeNull, diffBlackboard, extractPortTypes, resolvePortValue,
 } from '@/lib/blackboard'
+import { createPinia, setActivePinia } from 'pinia'
+import { collectOwnUids } from '@/lib/blackboard'
+import { useTreeStore } from '@/stores/treeStore'
+import type { TreeNode } from '@/types'
 import { buildInstanceTree } from '@/lib/instances'
 import xml from '../../../tests/fixtures/aom_fulltree.xml?raw'
 
@@ -68,5 +72,37 @@ describe('bbNameForPath', () => {
   })
   it('is null for an unknown path', () => {
     expect(bbNameForPath(root, 'nope')).toBeNull()
+  })
+})
+
+describe('collectOwnUids', () => {
+  const find = (n: TreeNode, pred: (n: TreeNode) => boolean): TreeNode | null => {
+    if (pred(n)) return n
+    for (const c of n.children) {
+      const r = find(c, pred)
+      if (r) return r
+    }
+    return null
+  }
+
+  it('leaves out nodes shown by inline-expanding a SubTree', () => {
+    setActivePinia(createPinia())
+    const store = useTreeStore()
+    store.parseTree(xml)
+    expect(store.selectInstance('main_patrol_route')).toBe(true)
+    const sub = find(store.treeData!, n => n.isSubtreeContainer === true && n.subtreeId === 'RouteSection')!
+    expect(sub).not.toBeNull()
+    store.toggleSubtree(sub)
+    expect(sub.expanded).toBe(true)
+    expect(sub.children.length).toBeGreaterThan(0)
+
+    const own = collectOwnUids(store.treeData!)
+    expect(own.has(sub.uid)).toBe(true)
+    expect(own.has(store.treeData!.uid)).toBe(true)
+    expect(own.has(sub.children[0].uid)).toBe(false)
+    const inBlock = store.treeData!.children[0]
+    expect(own.has(inBlock.uid)).toBe(true)
+    expect(store.ownUids.has(inBlock.uid)).toBe(true)
+    expect(store.ownUids.has(sub.children[0].uid)).toBe(false)
   })
 })

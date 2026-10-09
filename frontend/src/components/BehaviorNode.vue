@@ -109,6 +109,7 @@ const bb = useBlackboardStore()
 
 /** The blackboard value behind a `{key}` port, or null when the port is a literal or unknown. */
 function live(port: NodePort): { text: string; isNull: boolean; hint?: string } | null {
+  if (!store.ownUids.has(props.node.uid)) return null
   const v = resolvePortValue(port.value, bb.current)
   if (v === undefined) return null
   if (v === null) {

@@ -1,4 +1,5 @@
 import type { InstanceNode } from '@/lib/instances'
+import type { TreeNode } from '@/types'
 
 export interface BlackboardDiff {
   changed: string[]
@@ -95,4 +96,19 @@ export function bbNameForPath(root: InstanceNode | null, path: string): string |
     return null
   }
   return root ? walk(root) : null
+}
+
+/**
+ * Uids of the nodes parsed directly from the rendered `<BehaviorTree>` block.
+ * Children of an inline-expanded SubTree are left out: they read a remapped blackboard.
+ */
+export function collectOwnUids(root: TreeNode): Set<string> {
+  const out = new Set<string>()
+  const walk = (n: TreeNode) => {
+    out.add(n.uid)
+    if (n.expanded) return
+    n.children.forEach(walk)
+  }
+  walk(root)
+  return out
 }
