@@ -16,6 +16,20 @@ export const DEFAULT_PANELS: PanelState = {
   bottomHeight: 240,
 }
 
+export type PanelSide = 'left' | 'right' | 'bottom'
+
+const OPEN_KEY: Record<PanelSide, 'leftOpen' | 'rightOpen' | 'bottomOpen'> = {
+  left: 'leftOpen',
+  right: 'rightOpen',
+  bottom: 'bottomOpen',
+}
+
+/** A copy of `state` with the named panel opened or closed. */
+export function togglePanel(state: PanelState, side: PanelSide): PanelState {
+  const key = OPEN_KEY[side]
+  return { ...state, [key]: !state[key] }
+}
+
 const KEY = 'btm.panels'
 
 /** False when the key event comes from a field where the user is typing. */

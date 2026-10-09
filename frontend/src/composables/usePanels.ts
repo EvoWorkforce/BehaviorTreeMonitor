@@ -1,5 +1,5 @@
 import { reactive, watch, onMounted, onUnmounted } from 'vue'
-import { loadPanels, savePanels, shouldHandleShortcut } from '@/lib/panels'
+import { loadPanels, savePanels, shouldHandleShortcut, togglePanel, type PanelSide } from '@/lib/panels'
 
 function storage(): Storage | null {
   try {
@@ -9,21 +9,28 @@ function storage(): Storage | null {
   }
 }
 
-/** Open state and sizes of the left, right and bottom panels; `[` and `]` toggle the side rails. */
+// One shared copy, so the toolbar buttons, the panel close buttons and App.vue see the same state.
+const panels = reactive(loadPanels(storage()))
+watch(panels, p => savePanels(storage(), { ...p }))
+
+function toggle(side: PanelSide) {
+  Object.assign(panels, togglePanel(panels, side))
+}
+
+/** Shared open state and sizes of the left, right and bottom panels. */
 export function usePanels() {
-  const panels = reactive(loadPanels(storage()))
+  return { panels, toggle }
+}
 
-  watch(panels, p => savePanels(storage(), { ...p }))
-
+/** `[` and `]` toggle the side rails; call once, from App.vue. */
+export function usePanelShortcuts() {
   function onKey(e: KeyboardEvent) {
     if (e.ctrlKey || e.metaKey || e.altKey) return
     if (!shouldHandleShortcut(e.target)) return
-    if (e.key === '[') panels.leftOpen = !panels.leftOpen
-    else if (e.key === ']') panels.rightOpen = !panels.rightOpen
+    if (e.key === '[') toggle('left')
+    else if (e.key === ']') toggle('right')
   }
 
   onMounted(() => window.addEventListener('keydown', onKey))
   onUnmounted(() => window.removeEventListener('keydown', onKey))
-
-  return { panels }
 }

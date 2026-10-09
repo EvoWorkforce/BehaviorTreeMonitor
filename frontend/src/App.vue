@@ -109,7 +109,7 @@ import ZoomControls from './components/ZoomControls.vue'
 import Timeline from './components/Timeline.vue'
 import { useTreeStore, getNodeHeight } from './stores/treeStore'
 import { useWebSocket } from './composables/useWebSocket'
-import { usePanels } from './composables/usePanels'
+import { usePanels, usePanelShortcuts } from './composables/usePanels'
 import { useTooltip } from './composables/useTooltip'
 import { useBlackboardStore } from './stores/blackboardStore'
 import { useTimelineStore } from './stores/timelineStore'
@@ -121,6 +121,7 @@ const bb = useBlackboardStore()
 const timeline = useTimelineStore()
 const connectionError = ref('')
 const { panels } = usePanels()
+usePanelShortcuts()
 
 // ---- WebSocket ----
 const { connect: wsConnect, send: wsSend, close: wsClose } = useWebSocket(handleMessage)
