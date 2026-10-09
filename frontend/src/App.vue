@@ -13,38 +13,17 @@
         @select="onSelectInstance"
       />
       <div ref="containerRef" class="canvas-container">
-        <Breadcrumb
-          v-if="store.instances"
-          :path="store.selectedPath"
-          :root-label="store.instances.treeId"
-          @select="onSelectInstance"
-        />
-        <SearchBar v-model:follow="follow" :root="store.treeData" :statuses="store.nodeStatuses" @update:match-uids="matchUids = $event" @pan-to="panToNode" />
-        <div class="canvas-bg"></div>
-
-        <!-- Status counts -->
-        <div v-if="store.connected" class="status-bar">
-          <div class="stat-item">
-            <span class="stat-dot idle"></span>
-            <span class="stat-count">{{ store.stats.idle }}</span>
-            <span class="stat-label">IDLE</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-dot running"></span>
-            <span class="stat-count">{{ store.stats.running }}</span>
-            <span class="stat-label">RUNNING</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-dot success"></span>
-            <span class="stat-count">{{ store.stats.success }}</span>
-            <span class="stat-label">SUCCESS</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-dot failure"></span>
-            <span class="stat-count">{{ store.stats.failure }}</span>
-            <span class="stat-label">FAILURE</span>
-          </div>
+        <div class="canvas-header">
+          <Breadcrumb
+            v-if="store.instances"
+            :path="store.selectedPath"
+            :root-label="store.instances.treeId"
+            @select="onSelectInstance"
+          />
+          <StatusCounts v-if="store.connected" :stats="store.stats" />
+          <SearchBar v-model:follow="follow" :root="store.treeData" :statuses="store.nodeStatuses" @update:match-uids="matchUids = $event" @pan-to="panToNode" />
         </div>
+        <div class="canvas-bg"></div>
 
         <!-- SVG canvas -->
         <svg
@@ -123,6 +102,7 @@ import BehaviorNode from './components/BehaviorNode.vue'
 import Toolbar from './components/Toolbar.vue'
 import InstanceRail from './components/InstanceRail.vue'
 import Breadcrumb from './components/Breadcrumb.vue'
+import StatusCounts from './components/StatusCounts.vue'
 import SearchBar from './components/SearchBar.vue'
 import BlackboardRail from './components/BlackboardRail.vue'
 import ZoomControls from './components/ZoomControls.vue'
