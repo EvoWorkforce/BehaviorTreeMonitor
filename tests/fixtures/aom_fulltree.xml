@@ -1,0 +1,460 @@
+<root BTCPP_format="4">
+    <BehaviorTree ID="main_bt" _fullpath="">
+        <ReactiveSequence name="autonomous_guard" _uid="1">
+            <IsAutonomousOperation name="IsAutonomousOperation" _uid="2" is_autonomous_operation="{is_autonomous_operation}"/>
+            <ReactiveFallback name="main_decision" _uid="3">
+                <Sequence name="patrol_branch" _uid="4">
+                    <IsPatrolOperation name="IsPatrolOperation" _uid="5" operation="{operation}"/>
+                    <SubTree ID="PatrolRoute" _fullpath="main_patrol_route" _uid="6" section_target_index="{section_target_index}" cancel_actions="{cancel_actions}" is_stood_down="{is_stood_down}" is_critical_battery_state="{is_critical_battery_state}" operation_failed="{operation_failed}" is_charging_state="{is_charging_state}" is_temperature_ok_state="{is_temperature_ok_state}" is_critical_temperature_state="{is_critical_temperature_state}" pending_request="{pending_request}" waypoint_actions_running="{waypoint_actions_running}" at_base="{at_base}" index_valid="{index_valid}" route="{patrol_waypoints}" route_failure_message="{route_failure_message}" battery_soc="{battery_soc}" section_result="{section_result}" index="{index}" operation="{operation}" temperature="{temperature}" is_battery_ok_state="{is_battery_ok_state}" is_charging="{is_charging}" reported_mode="{locomotion_mode}" route_matches_recorder="{route_matches_recorder}" join_strategy="{join_strategy}" robot_pose="{robot_pose}" dock_commanded="{dock_commanded}" localization_source="{localization_source}"/>
+                </Sequence>
+                <Sequence name="charge_branch" _uid="54">
+                    <Fallback name="needs_dock_trigger" _uid="55">
+                        <ScriptCondition name="ScriptCondition" _uid="56" code="dock_commanded"/>
+                        <Inverter name="Inverter" _uid="57">
+                            <IsBatteryOk name="IsBatteryOk" _uid="58" battery_soc="{battery_soc}"/>
+                        </Inverter>
+                        <Inverter name="Inverter" _uid="59">
+                            <IsTemperatureOk name="IsTemperatureOk" _uid="60" temperature="{temperature}"/>
+                        </Inverter>
+                    </Fallback>
+                    <ScriptCondition name="ScriptCondition" _uid="61" code="operation == &apos;patrol&apos; || operation == &apos;go_to_base&apos; || operation == &apos;docking&apos; || operation == &apos;docked&apos; || operation == &apos;undocking&apos;"/>
+                    <Fallback name="charge_or_emergency_standdown" _uid="62">
+                        <Sequence name="charge_sequence" _uid="63">
+                            <RetryUntilSuccessful name="RetryUntilSuccessful" _uid="64" num_attempts="5" _skipIf="dock_skip_walk">
+                                <Fallback name="go_to_base_with_thermal_safety" _uid="65">
+                                    <Sequence name="safe_navigation_to_base" _uid="66">
+                                        <Inverter name="Inverter" _uid="67">
+                                            <IsCriticalTemperature name="IsCriticalTemperature" _uid="68" temperature="{temperature}"/>
+                                        </Inverter>
+                                        <SubTree ID="GoToBaseRoute" _fullpath="main_base_route" _uid="69" section_target_index="{section_target_index}" is_stood_down="{is_stood_down}" dock_cancel_requested="{dock_cancel_requested}" operation="{operation}" route_failure_message="{route_failure_message}" join_strategy="{join_strategy}" robot_pose="{robot_pose}" section_result="{section_result}" index="{index}" temperature="{temperature}" reported_mode="{locomotion_mode}" route_matches_recorder="{route_matches_recorder}" localization_source="{localization_source}" is_critical_temperature_state="{is_critical_temperature_state}" pending_request="{pending_request}" route="{patrol_waypoints}" index_valid="{index_valid}" at_base="{at_base}"/>
+                                    </Sequence>
+                                    <Sequence name="thermal_cooldown_pause" _uid="101">
+                                        <IsCriticalTemperature name="IsCriticalTemperature" _uid="102" temperature="{temperature}"/>
+                                        <StandDown name="StandDown" _uid="103"/>
+                                        <WaitUntilCooled name="WaitUntilCooled" _uid="104" temperature="{temperature}" target_temp="65"/>
+                                        <StandUp name="StandUp" _uid="105"/>
+                                        <AlwaysFailure name="AlwaysFailure" _uid="106"/>
+                                    </Sequence>
+                                    <Sequence name="dock_cancel_resume_patrol" _uid="107">
+                                        <ScriptCondition name="ScriptCondition" _uid="108" code="dock_cancel_requested"/>
+                                        <Script name="Script" _uid="109" code="dock_cancel_requested := false; operation := &apos;patrol&apos;"/>
+                                        <Sleep name="Sleep" _uid="110" msec="100"/>
+                                    </Sequence>
+                                </Fallback>
+                            </RetryUntilSuccessful>
+                            <RetryUntilSuccessful name="RetryUntilSuccessful" _uid="111" num_attempts="4">
+                                <Sequence name="docking_attempt" _uid="112" _failureIf="dock_error == 1">
+                                    <Fallback name="off_the_contacts_first" _uid="113">
+                                        <ScriptCondition name="ScriptCondition" _uid="114" code="operation != &apos;docked&apos;"/>
+                                        <Undock name="Undock" _uid="115" set_operation="docking"/>
+                                    </Fallback>
+                                    <Dock name="Dock" _uid="116" error_code="{dock_error}" failure_message="{dock_failure_message}"/>
+                                    <WaitUntilCharging name="WaitUntilCharging" _uid="117" is_charging="{is_charging}" timeout_sec="7.0"/>
+                                </Sequence>
+                            </RetryUntilSuccessful>
+                            <ReactiveFallback name="charge_hold" _uid="118">
+                                <ScriptCondition name="ScriptCondition" _uid="119" code="undock_commanded"/>
+                                <Sequence name="Sequence" _uid="120">
+                                    <Inverter name="Inverter" _uid="121">
+                                        <ScriptCondition name="ScriptCondition" _uid="122" code="dock_commanded"/>
+                                    </Inverter>
+                                    <WaitUntilCharged name="WaitUntilCharged" _uid="123" battery_soc="{battery_soc}"/>
+                                    <WaitUntilCooled name="WaitUntilCooled" _uid="124" target_temp="50" temperature="{temperature}"/>
+                                </Sequence>
+                                <KeepRunningUntilFailure name="KeepRunningUntilFailure" _uid="125">
+                                    <AlwaysSuccess name="AlwaysSuccess" _uid="126"/>
+                                </KeepRunningUntilFailure>
+                            </ReactiveFallback>
+                            <Undock name="Undock" _uid="127" set_operation="undocking"/>
+                            <Script name="Script" _uid="128" code="dock_commanded := false; undock_commanded := false; dock_skip_walk := false"/>
+                            <Fallback name="post_undock_disposition" _uid="129">
+                                <Sequence name="Sequence" _uid="130">
+                                    <ScriptCondition name="ScriptCondition" _uid="131" code="resume_patrol"/>
+                                    <Script name="Script" _uid="132" code="operation := &apos;patrol&apos;"/>
+                                </Sequence>
+                                <SetIdle name="SetIdle" _uid="133"/>
+                            </Fallback>
+                            <Sleep name="Sleep" _uid="134" msec="100"/>
+                        </Sequence>
+                        <Sequence name="docking_failure_standdown" _uid="135">
+                            <StandDown name="StandDown" _uid="136" _skipIf="dock_error == 1"/>
+                            <Script name="Script" _uid="137" code="operation_failed := true; dock_commanded := false; dock_skip_walk := false; undock_commanded := false"/>
+                            <AlwaysFailure name="AlwaysFailure" _uid="138"/>
+                        </Sequence>
+                    </Fallback>
+                </Sequence>
+                <Fallback name="idle_and_safety_fallback" _uid="139">
+                    <ReactiveSequence name="safety_standdown" _uid="140">
+                        <Fallback name="abnormal_condition" _uid="141">
+                            <IsCriticalBattery name="IsCriticalBattery" _uid="142" battery_soc="{battery_soc}"/>
+                            <IsCriticalTemperature name="IsCriticalTemperature" _uid="143" temperature="{temperature}"/>
+                        </Fallback>
+                        <Inverter name="Inverter" _uid="144">
+                            <IsStoodDown name="IsStoodDown" _uid="145"/>
+                        </Inverter>
+                        <StandDown name="StandDown" _uid="146"/>
+                        <SetIdle name="SetIdle" _uid="147"/>
+                    </ReactiveSequence>
+                    <Sequence name="idle" _uid="148">
+                        <Inverter name="Inverter" _uid="149">
+                            <ScriptCondition name="ScriptCondition" _uid="150" code="operation_failed"/>
+                        </Inverter>
+                        <SetIdle name="SetIdle" _uid="151"/>
+                    </Sequence>
+                </Fallback>
+            </ReactiveFallback>
+        </ReactiveSequence>
+    </BehaviorTree>
+    <BehaviorTree ID="PatrolRoute" _fullpath="main_patrol_route">
+        <Sequence name="patrol_route" _uid="7">
+            <Script name="Script" _uid="8" code="section_action_count := 0"/>
+            <JoinRoute name="JoinRoute" _uid="9" route="{route}" localization_source="{localization_source}" max_join_distance_m="5.000000" strategy="{join_strategy}" robot_pose="{robot_pose}" index="{index}" index_valid="{index_valid}" _skipIf="index_valid"/>
+            <KeepRunningUntilFailure name="KeepRunningUntilFailure" _uid="10">
+                <Sequence name="patrol_section_loop" _uid="11">
+                    <IsPatrolOperation name="IsPatrolOperation" _uid="12" operation="{operation}"/>
+                    <Inverter name="Inverter" _uid="13">
+                        <ScriptCondition name="ScriptCondition" _uid="14" code="dock_commanded"/>
+                    </Inverter>
+                    <Inverter name="Inverter" _uid="15">
+                        <IsCriticalTemperature name="IsCriticalTemperature" _uid="16" temperature="{temperature}"/>
+                    </Inverter>
+                    <IsBatteryOk name="IsBatteryOk" _uid="17" battery_soc="{battery_soc}"/>
+                    <IsTemperatureOk name="IsTemperatureOk" _uid="18" temperature="{temperature}"/>
+                    <Inverter name="Inverter" _uid="19">
+                        <IsCharging name="IsCharging" _uid="20" is_charging="{is_charging}"/>
+                    </Inverter>
+                    <RouteMatchesRecorder name="RouteMatchesRecorder" _uid="21" route_matches_recorder="{route_matches_recorder}"/>
+                    <Fallback name="Fallback" _uid="22">
+                        <ReactiveFallback name="section_or_pending_request" _uid="23">
+                            <ScriptCondition name="ScriptCondition" _uid="24" code="pending_request != 0"/>
+                            <SubTree ID="RouteSection" _fullpath="main_patrol_route/RouteSection::25" _uid="25" section_context="{section_context}" section_action_count="{section_action_count}" section_action_set="{section_action_set}" section_target_index="{section_target_index}" section_result="{section_result}" route_failure_message="{route_failure_message}" localization_source="{localization_source}" reported_mode="{reported_mode}" skip_base="true" index="{index}" route="{route}"/>
+                        </ReactiveFallback>
+                        <Sequence name="mark_route_failed" _uid="39">
+                            <Script name="Script" _uid="40" code="operation_failed := true"/>
+                            <AlwaysFailure name="AlwaysFailure" _uid="41"/>
+                        </Sequence>
+                    </Fallback>
+                    <SubTree ID="WaypointActions" _fullpath="main_patrol_route/actions_at_waypoint" _uid="42" is_critical_battery_state="{is_critical_battery_state}" is_critical_temperature_state="{is_critical_temperature_state}" is_stood_down="{is_stood_down}" cancel_actions="{cancel_actions}" pending_request="{pending_request}" temperature="{temperature}" battery_soc="{battery_soc}" actions_outcome="{actions_outcome}" context="{section_context}" waypoint_actions_running="{waypoint_actions_running}" action_set="{section_action_set}" _skipIf="section_result != 0 || section_action_count == 0"/>
+                    <AdvanceRoute name="AdvanceRoute" _uid="53" route="{route}" index="{index}" pending="{pending_request}" skip_base="true" at_base="{at_base}"/>
+                </Sequence>
+            </KeepRunningUntilFailure>
+        </Sequence>
+    </BehaviorTree>
+    <BehaviorTree ID="RouteSection" _fullpath="main_patrol_route/RouteSection::25">
+        <Sequence name="route_section" _uid="26">
+            <SelectSection name="SelectSection" _uid="27" route="{route}" index="{index}" skip_base="{skip_base}" locomotion_mode="{section_mode}" to_wp="{to_wp}" to_action_count="{section_action_count}" target_index="{section_target_index}" to_context="{section_context}" to_action_set="{section_action_set}" to_localization_source="{section_localization_source}"/>
+            <Fallback name="localization_source_guard" _uid="28">
+                <ScriptCondition name="ScriptCondition" _uid="29" code="section_localization_source == localization_source"/>
+                <Sequence name="localization_source_retry" _uid="30">
+                    <Sleep name="Sleep" _uid="31" msec="2000"/>
+                    <ScriptCondition name="ScriptCondition" _uid="32" code="section_localization_source == localization_source"/>
+                </Sequence>
+                <Sequence name="localization_source_mismatch" _uid="33">
+                    <Script name="Script" _uid="34" code="route_failure_message := &apos;localization_source_mismatch&apos;"/>
+                    <AlwaysFailure name="AlwaysFailure" _uid="35"/>
+                </Sequence>
+            </Fallback>
+            <RetryUntilSuccessful name="RetryUntilSuccessful" _uid="36" num_attempts="3">
+                <SetLocomotionMode name="SetLocomotionMode" _uid="37" topic_name="/evo/locomotion/setmode" mode="{section_mode}" reported_mode="{reported_mode}" controller_id="2" confirm_timeout_sec="5.0" settle_delay_sec="1.0" republish_interval_sec="0.5"/>
+            </RetryUntilSuccessful>
+            <GoToPose name="GoToPose" _uid="38" target="{to_wp}" locomotion_mode="{section_mode}" section_result="{section_result}"/>
+        </Sequence>
+    </BehaviorTree>
+    <BehaviorTree ID="WaypointActions" _fullpath="main_patrol_route/actions_at_waypoint">
+        <Sequence name="waypoint_actions" _uid="43">
+            <Script name="Script" _uid="44" code="waypoint_actions_running := true; cancel_actions := false; actions_interrupt := false"/>
+            <ReactiveSequence name="actions_until_done" _uid="45">
+                <ForceSuccess name="ForceSuccess" _uid="46">
+                    <IsCriticalTemperature name="IsCriticalTemperature" _uid="47" temperature="{temperature}"/>
+                </ForceSuccess>
+                <ForceSuccess name="ForceSuccess" _uid="48">
+                    <IsCriticalBattery name="IsCriticalBattery" _uid="49" battery_soc="{battery_soc}"/>
+                </ForceSuccess>
+                <Script name="Script" _uid="50" code="actions_interrupt := actions_interrupt || pending_request != 0 || cancel_actions || is_critical_temperature_state || is_critical_battery_state"/>
+                <ExecuteActions name="ExecuteActions" _uid="51" cancel_timeout_s="15.000000" action_set="{action_set}" context="{context}" cancel_requested="{actions_interrupt}" actions_outcome="{actions_outcome}" _skipIf="actions_interrupt" _onHalted="waypoint_actions_running := false; cancel_actions := false"/>
+            </ReactiveSequence>
+            <Script name="Script" _uid="52" code="waypoint_actions_running := false; cancel_actions := false"/>
+        </Sequence>
+    </BehaviorTree>
+    <BehaviorTree ID="GoToBaseRoute" _fullpath="main_base_route">
+        <Sequence name="go_to_base_route" _uid="70">
+            <Script name="Script" _uid="71" code="operation := &apos;go_to_base&apos;"/>
+            <JoinRoute name="JoinRoute" _uid="72" route="{route}" localization_source="{localization_source}" max_join_distance_m="5.000000" strategy="{join_strategy}" robot_pose="{robot_pose}" index="{index}" index_valid="{index_valid}" _skipIf="index_valid"/>
+            <Fallback name="walk_until_at_base" _uid="73">
+                <KeepRunningUntilFailure name="KeepRunningUntilFailure" _uid="74">
+                    <Sequence name="go_to_base_section_loop" _uid="75">
+                        <Inverter name="Inverter" _uid="76">
+                            <IsCriticalTemperature name="IsCriticalTemperature" _uid="77" temperature="{temperature}"/>
+                        </Inverter>
+                        <Inverter name="Inverter" _uid="78">
+                            <ScriptCondition name="ScriptCondition" _uid="79" code="dock_cancel_requested"/>
+                        </Inverter>
+                        <RouteMatchesRecorder name="RouteMatchesRecorder" _uid="80" route_matches_recorder="{route_matches_recorder}"/>
+                        <ReactiveFallback name="section_or_pending_request" _uid="81">
+                            <ScriptCondition name="ScriptCondition" _uid="82" code="pending_request != 0"/>
+                            <SubTree ID="RouteSection" _fullpath="main_base_route/RouteSection::83" _uid="83" section_context="{base_context}" section_action_count="{base_action_count}" section_action_set="{base_action_set}" section_target_index="{section_target_index}" section_result="{section_result}" route_failure_message="{route_failure_message}" localization_source="{localization_source}" reported_mode="{reported_mode}" skip_base="false" index="{index}" route="{route}"/>
+                        </ReactiveFallback>
+                        <AdvanceRoute name="AdvanceRoute" _uid="97" route="{route}" index="{index}" pending="{pending_request}" skip_base="false" at_base="{at_base}"/>
+                        <Inverter name="Inverter" _uid="98">
+                            <ScriptCondition name="ScriptCondition" _uid="99" code="at_base"/>
+                        </Inverter>
+                    </Sequence>
+                </KeepRunningUntilFailure>
+                <ScriptCondition name="ScriptCondition" _uid="100" code="at_base &amp;&amp; !dock_cancel_requested"/>
+            </Fallback>
+        </Sequence>
+    </BehaviorTree>
+    <BehaviorTree ID="RouteSection" _fullpath="main_base_route/RouteSection::83">
+        <Sequence name="route_section" _uid="84">
+            <SelectSection name="SelectSection" _uid="85" route="{route}" index="{index}" skip_base="{skip_base}" locomotion_mode="{section_mode}" to_wp="{to_wp}" to_action_count="{section_action_count}" target_index="{section_target_index}" to_context="{section_context}" to_action_set="{section_action_set}" to_localization_source="{section_localization_source}"/>
+            <Fallback name="localization_source_guard" _uid="86">
+                <ScriptCondition name="ScriptCondition" _uid="87" code="section_localization_source == localization_source"/>
+                <Sequence name="localization_source_retry" _uid="88">
+                    <Sleep name="Sleep" _uid="89" msec="2000"/>
+                    <ScriptCondition name="ScriptCondition" _uid="90" code="section_localization_source == localization_source"/>
+                </Sequence>
+                <Sequence name="localization_source_mismatch" _uid="91">
+                    <Script name="Script" _uid="92" code="route_failure_message := &apos;localization_source_mismatch&apos;"/>
+                    <AlwaysFailure name="AlwaysFailure" _uid="93"/>
+                </Sequence>
+            </Fallback>
+            <RetryUntilSuccessful name="RetryUntilSuccessful" _uid="94" num_attempts="3">
+                <SetLocomotionMode name="SetLocomotionMode" _uid="95" topic_name="/evo/locomotion/setmode" mode="{section_mode}" reported_mode="{reported_mode}" controller_id="2" confirm_timeout_sec="5.0" settle_delay_sec="1.0" republish_interval_sec="0.5"/>
+            </RetryUntilSuccessful>
+            <GoToPose name="GoToPose" _uid="96" target="{to_wp}" locomotion_mode="{section_mode}" section_result="{section_result}"/>
+        </Sequence>
+    </BehaviorTree>
+    <TreeNodesModel>
+        <Action ID="AdvanceRoute">
+            <output_port name="at_base" type="bool">The waypoint now departed is a TYPE_BASE one</output_port>
+            <input_port name="skip_base" type="bool" default="true">Walk past TYPE_BASE waypoints</input_port>
+            <inout_port name="pending" type="int">Skip/return request: halts the running section, then is consumed here</inout_port>
+            <inout_port name="index" type="unsigned long">Index of the waypoint departed</inout_port>
+            <input_port name="route" type="std::vector&lt;robot_msgs::msg::Waypoint_&lt;std::allocator&lt;void&gt; &gt;, std::allocator&lt;robot_msgs::msg::Waypoint_&lt;std::allocator&lt;void&gt; &gt; &gt; &gt;">The route being walked</input_port>
+        </Action>
+        <Action ID="AlwaysFailure"/>
+        <Action ID="AlwaysSuccess"/>
+        <Control ID="AsyncFallback"/>
+        <Control ID="AsyncSequence"/>
+        <Decorator ID="Delay">
+            <input_port name="delay_msec" type="unsigned int">Tick the child after a few milliseconds</input_port>
+        </Decorator>
+        <Action ID="Dock">
+            <output_port name="error_code" type="int"/>
+            <output_port name="failure_message" type="std::string"/>
+            <input_port name="action_name" type="std::string" default="">Action server name</input_port>
+        </Action>
+        <Action ID="ExecuteActions">
+            <input_port name="action_set" type="robot_msgs::msg::ActionSet_&lt;std::allocator&lt;void&gt; &gt;">Actions of the waypoint just reached</input_port>
+            <input_port name="context" type="std::string">Where the set runs, for logs</input_port>
+            <output_port name="actions_outcome" type="robot_msgs::msg::Outcome_&lt;std::allocator&lt;void&gt; &gt;">How the set ended</output_port>
+            <input_port name="cancel_requested" type="bool" default="false">Cancel the set and wait for the executor's result</input_port>
+            <input_port name="cancel_timeout_s" type="double" default="15.000000">Longest wait for the result after a cancel, in seconds</input_port>
+            <input_port name="action_name" type="std::string" default="">Action server name</input_port>
+        </Action>
+        <Control ID="Fallback"/>
+        <Decorator ID="ForceFailure"/>
+        <Decorator ID="ForceSuccess"/>
+        <Action ID="GoToPose">
+            <input_port name="target" type="geometry_msgs::msg::Pose_&lt;std::allocator&lt;void&gt; &gt;">Pose of the waypoint this section approaches</input_port>
+            <output_port name="section_result" type="int">GoToPose result code for this section</output_port>
+            <input_port name="locomotion_mode" type="unsigned char">Mode of the waypoint being departed</input_port>
+            <output_port name="distance_remaining_m" type="double">Distance still to cover in this section</output_port>
+            <input_port name="action_name" type="std::string" default="">Action server name</input_port>
+        </Action>
+        <Control ID="IfThenElse"/>
+        <Decorator ID="Inverter"/>
+        <Condition ID="IsAutonomousOperation">
+            <input_port name="is_autonomous_operation" type="bool">Status of autonomous operation</input_port>
+        </Condition>
+        <Condition ID="IsBatteryOk">
+            <input_port name="battery_soc" type="double">Battery state of charge percentage</input_port>
+        </Condition>
+        <Condition ID="IsCharging">
+            <input_port name="is_charging" type="bool">Current charging status</input_port>
+        </Condition>
+        <Condition ID="IsCriticalBattery">
+            <input_port name="battery_soc" type="double">Battery state of charge percentage</input_port>
+        </Condition>
+        <Condition ID="IsCriticalTemperature">
+            <input_port name="temperature" type="int">Temperature of the Robot Motors to evaluate critical threshold</input_port>
+        </Condition>
+        <Condition ID="IsPatrolOperation">
+            <input_port name="operation" type="std::string" default="patrol">Current operation name</input_port>
+        </Condition>
+        <Condition ID="IsStoodDown"/>
+        <Condition ID="IsTemperatureOk">
+            <input_port name="temperature" type="int">Temperature of the Robot Motors</input_port>
+        </Condition>
+        <Action ID="JoinRoute">
+            <output_port name="index_valid" type="bool">The index has been chosen for this operation</output_port>
+            <inout_port name="index" type="unsigned long">Index of the waypoint departed</inout_port>
+            <input_port name="robot_pose" type="geometry_msgs::msg::Pose_&lt;std::allocator&lt;void&gt; &gt;" default="{robot_pose}">Current robot pose, from /evo/localization/pose</input_port>
+            <input_port name="max_join_distance_m" type="float" default="5.000000">Beyond this perpendicular distance the operation is refused</input_port>
+            <input_port name="localization_source" type="unsigned char" default="{localization_source}">Selected localizer; only sections approaching a waypoint recorded on it are joined</input_port>
+            <input_port name="strategy" type="std::string" default="NEAREST_SECTION_BOUNDED">NEAREST_SECTION_BOUNDED, RESUME_LAST or FIRST</input_port>
+            <input_port name="route" type="std::vector&lt;robot_msgs::msg::Waypoint_&lt;std::allocator&lt;void&gt; &gt;, std::allocator&lt;robot_msgs::msg::Waypoint_&lt;std::allocator&lt;void&gt; &gt; &gt; &gt;">The route being walked</input_port>
+        </Action>
+        <Decorator ID="KeepRunningUntilFailure"/>
+        <Decorator ID="LoopBool">
+            <output_port name="value" type="bool"/>
+            <input_port name="if_empty" type="BT::NodeStatus" default="SUCCESS">Status to return if queue is empty: SUCCESS, FAILURE, SKIPPED</input_port>
+            <inout_port name="queue" type="BT::AnyTypeAllowed"/>
+        </Decorator>
+        <Decorator ID="LoopDouble">
+            <output_port name="value" type="double"/>
+            <input_port name="if_empty" type="BT::NodeStatus" default="SUCCESS">Status to return if queue is empty: SUCCESS, FAILURE, SKIPPED</input_port>
+            <inout_port name="queue" type="BT::AnyTypeAllowed"/>
+        </Decorator>
+        <Decorator ID="LoopInt">
+            <output_port name="value" type="int"/>
+            <input_port name="if_empty" type="BT::NodeStatus" default="SUCCESS">Status to return if queue is empty: SUCCESS, FAILURE, SKIPPED</input_port>
+            <inout_port name="queue" type="BT::AnyTypeAllowed"/>
+        </Decorator>
+        <Decorator ID="LoopString">
+            <output_port name="value" type="std::string"/>
+            <input_port name="if_empty" type="BT::NodeStatus" default="SUCCESS">Status to return if queue is empty: SUCCESS, FAILURE, SKIPPED</input_port>
+            <inout_port name="queue" type="BT::AnyTypeAllowed"/>
+        </Decorator>
+        <Control ID="Parallel">
+            <input_port name="failure_count" type="int" default="1">number of children that need to fail to trigger a FAILURE</input_port>
+            <input_port name="success_count" type="int" default="-1">number of children that need to succeed to trigger a SUCCESS</input_port>
+        </Control>
+        <Control ID="ParallelAll">
+            <input_port name="max_failures" type="int" default="1">If the number of children returning FAILURE exceeds this value, ParallelAll returns FAILURE</input_port>
+        </Control>
+        <Decorator ID="Precondition">
+            <input_port name="else" type="BT::NodeStatus" default="FAILURE">Return status if condition is false</input_port>
+            <input_port name="if" type="std::string"/>
+        </Decorator>
+        <Control ID="ReactiveFallback"/>
+        <Control ID="ReactiveSequence"/>
+        <Decorator ID="Repeat">
+            <input_port name="num_cycles" type="int">Repeat a successful child up to N times. Use -1 to create an infinite loop.</input_port>
+        </Decorator>
+        <Decorator ID="RetryUntilSuccessful">
+            <input_port name="num_attempts" type="int">Execute again a failing child up to N times. Use -1 to create an infinite loop.</input_port>
+        </Decorator>
+        <Condition ID="RouteMatchesRecorder">
+            <input_port name="route_matches_recorder" type="bool" default="true">False once the recorder is re-recording or its waypoint count differs from the route being walked</input_port>
+        </Condition>
+        <Decorator ID="RunOnce">
+            <input_port name="then_skip" type="bool" default="true">If true, skip after the first execution, otherwise return the same NodeStatus returned once by the child.</input_port>
+        </Decorator>
+        <Action ID="Script">
+            <input_port name="code" type="std::string">Piece of code that can be parsed</input_port>
+        </Action>
+        <Condition ID="ScriptCondition">
+            <input_port name="code" type="BT::AnyTypeAllowed">Piece of code that can be parsed. Must return false or true</input_port>
+        </Condition>
+        <Action ID="SelectSection">
+            <output_port name="to_localization_source" type="unsigned char">Localization source of the waypoint this section approaches</output_port>
+            <output_port name="to_action_set" type="robot_msgs::msg::ActionSet_&lt;std::allocator&lt;void&gt; &gt;">Action set of the waypoint this section approaches</output_port>
+            <output_port name="to_context" type="std::string">Position of the target in the route, for logs</output_port>
+            <output_port name="target_index" type="unsigned long">Index of the waypoint this section approaches</output_port>
+            <output_port name="to_action_count" type="int">Number of actions in to_action_set</output_port>
+            <output_port name="to_wp" type="geometry_msgs::msg::Pose_&lt;std::allocator&lt;void&gt; &gt;">Pose of the waypoint this section approaches</output_port>
+            <output_port name="locomotion_mode" type="unsigned char">Locomotion mode of the departing waypoint, un-projected</output_port>
+            <input_port name="skip_base" type="bool" default="true">Do not approach TYPE_BASE waypoints</input_port>
+            <input_port name="index" type="unsigned long">Index of the waypoint departed</input_port>
+            <input_port name="route" type="std::vector&lt;robot_msgs::msg::Waypoint_&lt;std::allocator&lt;void&gt; &gt;, std::allocator&lt;robot_msgs::msg::Waypoint_&lt;std::allocator&lt;void&gt; &gt; &gt; &gt;">The route being walked</input_port>
+        </Action>
+        <Control ID="Sequence"/>
+        <Control ID="SequenceWithMemory"/>
+        <Action ID="SetBlackboard">
+            <inout_port name="output_key" type="BT::AnyTypeAllowed">Name of the blackboard entry where the value should be written</inout_port>
+            <input_port name="value" type="BT::AnyTypeAllowed">Value to be written into the output_key</input_port>
+        </Action>
+        <Action ID="SetIdle"/>
+        <Action ID="SetLocomotionMode">
+            <input_port name="republish_interval_sec" type="double" default="0.500000">Re-send the command this often while waiting</input_port>
+            <input_port name="settle_delay_sec" type="double" default="1.000000">Hold after confirmation before succeeding</input_port>
+            <input_port name="confirm_timeout_sec" type="double" default="5.000000">Fail if the mode is not confirmed within this</input_port>
+            <input_port name="controller_id" type="unsigned char" default="2">Motion controller id; must match the one aom_node claims, or HAL drops the command</input_port>
+            <input_port name="topic_name" type="std::string" default="/evo/locomotion/setmode">Topic to publish setmode commands on</input_port>
+            <input_port name="reported_mode" type="unsigned char" default="{locomotion_mode}">Mode currently reported by the hardware</input_port>
+            <input_port name="mode" type="unsigned char">Locomotion mode this section requires, un-projected</input_port>
+        </Action>
+        <Decorator ID="SkipUnlessUpdated">
+            <input_port name="entry" type="BT::Any">Entry to check</input_port>
+        </Decorator>
+        <Action ID="Sleep">
+            <input_port name="msec" type="unsigned int"/>
+        </Action>
+        <Action ID="StandDown">
+            <input_port name="action_name" type="std::string" default="">Action server name</input_port>
+        </Action>
+        <Action ID="StandUp">
+            <input_port name="action_name" type="std::string" default="">Action server name</input_port>
+        </Action>
+        <SubTree ID="SubTree">
+            <input_port name="_autoremap" type="bool" default="false">If true, all the ports with the same name will be remapped</input_port>
+        </SubTree>
+        <Control ID="Switch2">
+            <input_port name="case_2" type="std::string"/>
+            <input_port name="case_1" type="std::string"/>
+            <input_port name="variable" type="std::string"/>
+        </Control>
+        <Control ID="Switch3">
+            <input_port name="case_3" type="std::string"/>
+            <input_port name="case_2" type="std::string"/>
+            <input_port name="case_1" type="std::string"/>
+            <input_port name="variable" type="std::string"/>
+        </Control>
+        <Control ID="Switch4">
+            <input_port name="case_4" type="std::string"/>
+            <input_port name="case_3" type="std::string"/>
+            <input_port name="case_2" type="std::string"/>
+            <input_port name="case_1" type="std::string"/>
+            <input_port name="variable" type="std::string"/>
+        </Control>
+        <Control ID="Switch5">
+            <input_port name="case_5" type="std::string"/>
+            <input_port name="case_4" type="std::string"/>
+            <input_port name="case_3" type="std::string"/>
+            <input_port name="case_2" type="std::string"/>
+            <input_port name="case_1" type="std::string"/>
+            <input_port name="variable" type="std::string"/>
+        </Control>
+        <Control ID="Switch6">
+            <input_port name="case_5" type="std::string"/>
+            <input_port name="case_4" type="std::string"/>
+            <input_port name="case_6" type="std::string"/>
+            <input_port name="case_3" type="std::string"/>
+            <input_port name="case_2" type="std::string"/>
+            <input_port name="case_1" type="std::string"/>
+            <input_port name="variable" type="std::string"/>
+        </Control>
+        <Decorator ID="Timeout">
+            <input_port name="msec" type="unsigned int">After a certain amount of time, halt() the child if it is still running.</input_port>
+        </Decorator>
+        <Control ID="TryCatch">
+            <input_port name="catch_on_halt" type="bool" default="false">If true, execute the catch child when the node is halted during the try-block</input_port>
+        </Control>
+        <Action ID="Undock">
+            <input_port name="set_operation" type="std::string" default="docking">Operation state to claim, or empty to leave it alone</input_port>
+            <input_port name="action_name" type="std::string" default="">Action server name</input_port>
+        </Action>
+        <Action ID="UnsetBlackboard">
+            <input_port name="key" type="std::string">Key of the entry to remove</input_port>
+        </Action>
+        <Action ID="WaitUntilCharged">
+            <input_port name="battery_soc" type="double"/>
+        </Action>
+        <Action ID="WaitUntilCharging">
+            <input_port name="timeout_sec" type="double" default="7.000000">How long to wait for charging before giving up</input_port>
+            <input_port name="is_charging" type="bool">Whether the robot reports itself charging</input_port>
+        </Action>
+        <Action ID="WaitUntilCooled">
+            <input_port name="target_temp" type="int" default="50">Temperature at or below which the wait completes</input_port>
+            <input_port name="temperature" type="int">Current temperature of the Robot Motors</input_port>
+        </Action>
+        <Decorator ID="WaitValueUpdate">
+            <input_port name="entry" type="BT::Any">Entry to check</input_port>
+        </Decorator>
+        <Action ID="WasEntryUpdated">
+            <input_port name="entry" type="BT::Any">Entry to check</input_port>
+        </Action>
+        <Control ID="WhileDoElse"/>
+    </TreeNodesModel>
+</root>
