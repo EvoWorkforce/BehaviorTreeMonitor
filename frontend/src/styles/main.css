@@ -184,3 +184,22 @@ html, body {
 ::-webkit-scrollbar-track { background: var(--bg-tertiary); }
 ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
+
+/* Instance rail and breadcrumb */
+.instance-rail { width: 220px; flex: none; overflow-y: auto; background: var(--bg-secondary); border-right: 1px solid var(--border-color); }
+.rail-title { padding: 10px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
+.rail-list { list-style: none; margin: 0; padding: 0; }
+.rail-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; cursor: pointer; font-size: 13px; color: var(--text-secondary); }
+.rail-row:hover { background: var(--bg-tertiary); }
+.rail-row.selected { background: var(--bg-tertiary); color: var(--text-primary); }
+.rail-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rail-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--status-idle); }
+.rail-dot.running { background: var(--status-running); }
+.rail-dot.success { background: var(--status-success); }
+.rail-dot.failure { background: var(--status-failure); }
+.rail-empty { padding: 12px; font-size: 12px; color: var(--text-muted); }
+.breadcrumb { position: absolute; top: 12px; left: 12px; z-index: 5; display: flex; align-items: center; gap: 4px; font-size: 12px; }
+.crumb { background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 4px; padding: 3px 8px; color: var(--text-secondary); cursor: pointer; }
+.crumb:hover { background: var(--border-color); }
+.crumb.current { color: var(--text-primary); cursor: default; }
+.crumb-sep { color: var(--text-muted); }

@@ -6,6 +6,8 @@ import {
   NODE_BASE_HEIGHT, PORT_HEIGHT,
 } from '@/lib/parse'
 import type { ParseContext } from '@/lib/parse'
+import { buildInstanceTree } from '@/lib/instances'
+import type { InstanceNode } from '@/lib/instances'
 
 export { measureTextWidth, getNodePorts, getNodeHeight } from '@/lib/parse'
 
@@ -19,6 +21,8 @@ export const useTreeStore = defineStore('tree', () => {
 
   const treeData = ref<TreeNode | null>(null)
   const nodeStatuses: Record<string, string> = reactive({})
+  const instances = ref<InstanceNode | null>(null)
+  const selectedPath = ref('')
 
   const stats = computed(() => {
     const r = { idle: 0, running: 0, success: 0, failure: 0 }
@@ -84,19 +88,27 @@ export const useTreeStore = defineStore('tree', () => {
     // One context per parse; subtree expansion reuses it so generated uids stay unique.
     parseCtx = createParseContext(currentModelTypes, registerUid)
 
-    const rootUid = mainTree.getAttribute('_uid') ?? `_root_${mainId ?? 'main'}`
+    instances.value = buildInstanceTree(doc)
+    selectedPath.value = ''
+    renderBlock(mainTree, mainId ?? 'Root')
+  }
+
+  // Renders one BehaviorTree block alone as the canvas tree.
+  function renderBlock(block: Element, id: string) {
+    const ctx = parseCtx ?? createParseContext(currentModelTypes, registerUid)
+    const rootUid = block.getAttribute('_uid') ?? `_root_${id}`
     const rootChildren: TreeNode[] = []
-    for (const child of Array.from(mainTree.children)) {
-      const parsed = parseElement(child, 1, parseCtx)
+    for (const child of Array.from(block.children)) {
+      const parsed = parseElement(child, 1, ctx)
       if (parsed) rootChildren.push(parsed)
     }
 
     const parsedRoot: TreeNode = {
       tag: 'Root',
-      name: mainId ?? 'Root',
+      name: id,
       uid: rootUid,
       type: 'root',
-      attributes: { ID: mainId ?? 'Root' },
+      attributes: { ID: id },
       children: rootChildren,
       x: 0,
       y: 0,
@@ -111,6 +123,15 @@ export const useTreeStore = defineStore('tree', () => {
       layoutTree(parsedRoot, horizontal.value)
       treeData.value = parsedRoot
     }
+  }
+
+  /** Shows the block at `path` alone ('' is the main tree). Returns false if unknown. */
+  function selectInstance(path: string): boolean {
+    const entry = behaviorTreeEntries.find(e => e.fullpath === path)
+    if (!entry) return false
+    selectedPath.value = path
+    renderBlock(entry.element, entry.id)
+    return true
   }
 
   function relayout() {
@@ -215,8 +236,8 @@ export const useTreeStore = defineStore('tree', () => {
 
   return {
     connected, connecting, host, port, horizontal,
-    treeData, nodeStatuses, stats,
-    parseTree, updateStatus, toggleLayout, toggleSubtree,
+    treeData, nodeStatuses, stats, instances, selectedPath,
+    parseTree, selectInstance, updateStatus, toggleLayout, toggleSubtree,
     NODE_BASE_HEIGHT,
     PORT_HEIGHT,
   }

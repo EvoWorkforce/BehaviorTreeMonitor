@@ -31,7 +31,19 @@
 
     <!-- Main content -->
     <main class="main-content">
+      <InstanceRail
+        :root="store.instances"
+        :selected-path="store.selectedPath"
+        :statuses="store.nodeStatuses"
+        @select="onSelectInstance"
+      />
       <div ref="containerRef" class="canvas-container">
+        <Breadcrumb
+          v-if="store.instances"
+          :path="store.selectedPath"
+          :root-label="store.instances.treeId"
+          @select="onSelectInstance"
+        />
         <div class="canvas-bg"></div>
 
         <!-- Status counts -->
@@ -132,6 +144,8 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import BehaviorNode from './components/BehaviorNode.vue'
+import InstanceRail from './components/InstanceRail.vue'
+import Breadcrumb from './components/Breadcrumb.vue'
 import { useTreeStore, getNodeHeight } from './stores/treeStore'
 import { useWebSocket } from './composables/useWebSocket'
 import type { TreeNode, WsMessage } from './types'
@@ -329,6 +343,10 @@ function onToggleLayout() {
 function onToggleSubtree(node: TreeNode) {
   store.toggleSubtree(node)
   nextTick(() => setTimeout(zoomFit, 100))
+}
+
+function onSelectInstance(path: string) {
+  if (store.selectInstance(path)) nextTick(() => setTimeout(zoomFit, 50))
 }
 
 // ---- Tooltip ----
