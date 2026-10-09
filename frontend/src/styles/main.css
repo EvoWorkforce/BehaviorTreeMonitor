@@ -91,7 +91,7 @@ html, body {
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
 /* Main */
-.main-content { flex: 1; display: flex; overflow: hidden; height: calc(100vh - 48px); min-height: 0; }
+.main-content { flex: 1; display: flex; overflow: hidden; min-height: 0; }
 .canvas-container { flex: 1; position: relative; background: var(--bg-primary); overflow: hidden; width: 100%; height: 100%; }
 .canvas-bg { position: absolute; inset: 0; pointer-events: none; }
 .tree-canvas { width: 100%; height: 100%; cursor: grab; }
@@ -203,3 +203,7 @@ html, body {
 .crumb:hover { background: var(--border-color); }
 .crumb.current { color: var(--text-primary); cursor: default; }
 .crumb-sep { color: var(--text-muted); }
+
+/* Right rail and bottom drawer */
+.right-rail { flex: none; overflow-y: auto; background: var(--bg-secondary); border-left: 1px solid var(--border-color); }
+.bottom-drawer { flex: none; overflow: auto; background: var(--bg-secondary); border-top: 1px solid var(--border-color); }

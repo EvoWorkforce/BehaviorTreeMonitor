@@ -1,37 +1,12 @@
 <template>
   <div class="app">
-    <!-- Top toolbar -->
-    <header class="toolbar">
-      <div class="toolbar-left">
-        <div class="toolbar-title">
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path
-              d="M12 3L12 8M12 8L6 14M12 8L18 14M6 14L6 21M18 14L18 21M6 14L3 21M6 14L9 21M18 14L15 21M18 14L21 21"
-              stroke="#4ecdc4" stroke-width="2" stroke-linecap="round"
-            />
-          </svg>
-          <span>BehaviorTree Monitor</span>
-        </div>
-      </div>
-
-      <div class="connection-panel">
-        <input v-model="store.host" class="host" type="text" placeholder="localhost" :disabled="store.connected" />
-        <span style="color: var(--text-muted)">:</span>
-        <input v-model.number="store.port" class="port" type="number" placeholder="1667" :disabled="store.connected" />
-        <button class="btn" :class="store.connected ? 'btn-danger' : 'btn-primary'" @click="toggleConnection">
-          {{ store.connecting ? 'Connecting...' : store.connected ? 'Disconnect' : 'Connect' }}
-        </button>
-        <div class="status-indicator" :class="connectionStatus">
-          <span class="status-dot"></span>
-          <span>{{ statusText }}</span>
-        </div>
-        <span v-if="connectionError" class="connection-error" :title="connectionError">{{ connectionError }}</span>
-      </div>
-    </header>
+    <Toolbar :connection-error="connectionError" :send="wsSend" />
 
     <!-- Main content -->
     <main class="main-content">
       <InstanceRail
+        v-if="panels.leftOpen"
+        :style="{ width: panels.leftWidth + 'px' }"
         :root="store.instances"
         :selected-path="store.selectedPath"
         :statuses="store.nodeStatuses"
@@ -137,21 +112,26 @@
           </div>
         </div>
       </div>
+      <aside v-if="panels.rightOpen" class="right-rail" :style="{ width: panels.rightWidth + 'px' }" aria-label="Data"></aside>
     </main>
+    <section v-if="panels.bottomOpen" class="bottom-drawer" :style="{ height: panels.bottomHeight + 'px' }" aria-label="Timeline"></section>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import BehaviorNode from './components/BehaviorNode.vue'
+import Toolbar from './components/Toolbar.vue'
 import InstanceRail from './components/InstanceRail.vue'
 import Breadcrumb from './components/Breadcrumb.vue'
 import { useTreeStore, getNodeHeight } from './stores/treeStore'
 import { useWebSocket } from './composables/useWebSocket'
+import { usePanels } from './composables/usePanels'
 import type { TreeNode, WsMessage } from './types'
 
 const store = useTreeStore()
 const connectionError = ref('')
+const { panels } = usePanels()
 
 // ---- WebSocket ----
 const { connect: wsConnect, send: wsSend, close: wsClose } = useWebSocket(handleMessage)
@@ -194,30 +174,7 @@ function handleMessage(msg: WsMessage) {
   }
 }
 
-function toggleConnection() {
-  if (store.connected) {
-    wsSend({ type: 'disconnect' })
-    store.connected = false
-  } else {
-    store.connecting = true
-    wsSend({ type: 'connect', host: store.host, port: store.port })
-  }
-}
-
 // ---- Computed properties ----
-const connectionStatus = computed(() => {
-  if (store.connecting) return 'connecting'
-  if (store.connected) return 'connected'
-  return 'disconnected'
-})
-
-const statusText = computed(() => {
-  if (store.connecting) return 'Connecting...'
-  if (store.connected) return 'Connected'
-  if (connectionError.value) return 'Connection failed'
-  return 'Not connected'
-})
-
 const visibleNodes = computed<TreeNode[]>(() => {
   if (!store.treeData) return []
   const nodes: TreeNode[] = []
