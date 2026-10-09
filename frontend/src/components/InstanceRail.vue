@@ -1,6 +1,6 @@
 <template>
   <aside class="instance-rail" aria-label="Instances">
-    <div class="rail-title">Instances</div>
+    <div class="rail-title">Instances <PanelClose side="left" label="instances" /></div>
     <ul v-if="rows.length" class="rail-list">
       <li
         v-for="row in rows"
@@ -20,6 +20,7 @@
 </template>
 
 <script setup lang="ts">
+import PanelClose from './PanelClose.vue'
 import { computed } from 'vue'
 import type { InstanceNode } from '@/lib/instances'
 

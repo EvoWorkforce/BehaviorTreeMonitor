@@ -11,6 +11,7 @@
       <span class="tl-note">
         Reading transitions clears the runtime buffer for every client. Do not record with Groot2 at the same time.
       </span>
+      <PanelClose side="bottom" label="timeline" />
     </div>
     <div v-if="!tl.records.length" class="rail-empty">
       {{ tl.recording ? 'Recording. No transitions yet.' : 'Press Record to capture node status changes.' }}
@@ -44,6 +45,7 @@
 </template>
 
 <script setup lang="ts">
+import PanelClose from './PanelClose.vue'
 import { computed } from 'vue'
 import { useTreeStore } from '../stores/treeStore'
 import { useTimelineStore } from '../stores/timelineStore'

@@ -175,7 +175,7 @@ html, body {
 
 /* Instance rail and breadcrumb */
 .instance-rail { width: 220px; flex: none; overflow-y: auto; background: var(--bg-secondary); border-right: 1px solid var(--border-color); }
-.rail-title { padding: 10px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
+.rail-title { display: flex; align-items: center; gap: 6px; padding: 10px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
 .rail-list { list-style: none; margin: 0; padding: 0; }
 .rail-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; cursor: pointer; font-size: 13px; color: var(--text-secondary); }
 .rail-row:hover { background: var(--bg-tertiary); }
@@ -260,3 +260,8 @@ html, body {
 .tl-chg b.running { color: var(--status-running); }
 .tl-chg b.success { color: var(--status-success); }
 .tl-chg b.failure { color: var(--status-failure); }
+
+/* Panel close button: always the last item of a panel header */
+.panel-close { margin-left: auto; background: none; border: none; color: var(--text-muted); font-size: 16px; line-height: 1; cursor: pointer; padding: 0 4px; }
+.panel-close:hover { color: var(--text-primary); }
+.tl-header .panel-close { margin-left: 4px; }
