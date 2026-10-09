@@ -1,28 +1,10 @@
-/* BehaviorTree Monitor - Dark Theme */
-:root {
-  --bg-primary: #2d2d42;
-  --bg-secondary: #262638;
-  --bg-tertiary: #1f1f2e;
-  --bg-node: #2d2d3a;
-  --bg-node-hover: #3d3d4a;
-  --text-primary: #e4e4e7;
-  --text-secondary: #a1a1aa;
-  --text-muted: #71717a;
-  --border-color: #3f3f46;
-  --border-light: #52525b;
-  --connection-color: #4ecdc4;
-  --connection-glow: rgba(78, 205, 196, 0.3);
-  --status-idle: #6c757d;
-  --status-running: #ffc107;
-  --status-success: #28a745;
-  --status-failure: #dc3545;
-}
+/* Colours and fonts come from tokens.css */
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 html, body {
   width: 100%; height: 100%; overflow: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: var(--font-sans);
   background-color: var(--bg-primary);
   color: var(--text-primary);
 }
@@ -64,10 +46,10 @@ html, body {
   display: flex; align-items: center; gap: 6px;
 }
 .btn:hover { background: var(--border-color); }
-.btn-primary { background: var(--connection-color); border-color: var(--connection-color); color: var(--bg-primary); }
-.btn-primary:hover { background: #3dbdb5; }
-.btn-danger { background: var(--status-failure); border-color: var(--status-failure); }
-.btn-danger:hover { background: #c82333; }
+.btn-primary { background: var(--connection-color); border-color: var(--connection-color); color: var(--on-accent); }
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-danger { background: var(--status-failure); border-color: var(--status-failure); color: var(--on-danger); }
+.btn-danger:hover { background: var(--danger-hover); }
 
 .status-indicator {
   display: flex; align-items: center; gap: 6px;
@@ -81,7 +63,7 @@ html, body {
 
 .connection-error {
   max-width: 280px;
-  color: #ff8f8f;
+  color: var(--error-text);
   font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
@@ -150,7 +132,7 @@ html, body {
 
 .port-group { font-size: 10px; }
 .port-label { fill: var(--text-secondary); }
-.port-value { fill: #1a1a2e; font-family: 'Monaco', 'Menlo', monospace; }
+.port-value { fill: var(--port-value-text); font-family: var(--font-mono); }
 
 /* Connection lines */
 .connection-line { fill: none; stroke: var(--connection-color); stroke-width: 2; }
@@ -162,13 +144,13 @@ html, body {
   border: 1px solid var(--border-color); border-radius: 6px;
   padding: 10px 14px; font-size: 12px; pointer-events: none;
   z-index: 1000; max-width: 300px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-panel);
 }
 .tooltip-title { font-weight: 600; margin-bottom: 6px; color: var(--text-primary); }
 .tooltip-type { color: var(--text-muted); margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); }
 .tooltip-attr { display: flex; gap: 8px; margin-top: 4px; }
 .tooltip-attr-name { color: var(--connection-color); }
-.tooltip-attr-value { color: var(--text-secondary); font-family: 'Monaco', 'Menlo', monospace; }
+.tooltip-attr-value { color: var(--text-secondary); font-family: var(--font-mono); }
 
 /* Empty state */
 .empty-state {
@@ -207,3 +189,7 @@ html, body {
 /* Right rail and bottom drawer */
 .right-rail { flex: none; overflow-y: auto; background: var(--bg-secondary); border-left: 1px solid var(--border-color); }
 .bottom-drawer { flex: none; overflow: auto; background: var(--bg-secondary); border-top: 1px solid var(--border-color); }
+
+.btn-icon { padding: 6px 8px; }
+.btn svg { width: 16px; height: 16px; }
+.toolbar-title svg { color: var(--connection-color); }

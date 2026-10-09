@@ -79,14 +79,15 @@
 
         <!-- Zoom controls -->
         <div class="zoom-controls">
-          <button class="btn" title="Zoom in" @click="zoomIn">+</button>
-          <button class="btn" title="Zoom out" @click="zoomOut">−</button>
+          <button class="btn" title="Zoom in" @click="zoomIn"><IconPlus /></button>
+          <button class="btn" title="Zoom out" @click="zoomOut"><IconMinus /></button>
           <span class="zoom-value">{{ Math.round(zoom * 100) }}%</span>
-          <button class="btn" title="Fit" @click="zoomFit">◎</button>
-          <button class="btn" title="Reset" @click="zoomReset">↺</button>
+          <button class="btn" title="Fit" @click="zoomFit"><IconFit /></button>
+          <button class="btn" title="Reset" @click="zoomReset"><IconReset /></button>
           <span class="zoom-divider"></span>
           <button class="btn" :title="store.horizontal ? 'Switch to vertical layout' : 'Switch to horizontal layout'" @click="onToggleLayout">
-            {{ store.horizontal ? '⇄' : '⇵' }}
+            <IconLayoutH v-if="store.horizontal" />
+            <IconLayoutV v-else />
           </button>
         </div>
 
@@ -124,6 +125,12 @@ import BehaviorNode from './components/BehaviorNode.vue'
 import Toolbar from './components/Toolbar.vue'
 import InstanceRail from './components/InstanceRail.vue'
 import Breadcrumb from './components/Breadcrumb.vue'
+import IconPlus from './components/icons/IconPlus.vue'
+import IconMinus from './components/icons/IconMinus.vue'
+import IconFit from './components/icons/IconFit.vue'
+import IconReset from './components/icons/IconReset.vue'
+import IconLayoutH from './components/icons/IconLayoutH.vue'
+import IconLayoutV from './components/icons/IconLayoutV.vue'
 import { useTreeStore, getNodeHeight } from './stores/treeStore'
 import { useWebSocket } from './composables/useWebSocket'
 import { usePanels } from './composables/usePanels'

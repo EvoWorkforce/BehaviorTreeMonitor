@@ -10,7 +10,7 @@
     <rect class="node-box" :width="props.node.width" :height="height" rx="4" />
 
     <!-- Icon (left-aligned) -->
-    <text class="node-icon" x="8" y="15">{{ nodeIcon }}</text>
+    <component :is="nodeIcon" class="node-icon" x="6" y="8" width="12" height="12" />
 
     <!-- Name (centred in the area right of the icon) -->
     <text class="node-title" :x="(22 + props.node.width - (props.node.isSubtreeContainer ? 20 : 0)) / 2" y="15" text-anchor="middle">{{ props.node.name }}</text>
@@ -72,8 +72,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, type Component } from 'vue'
 import type { TreeNode, NodePort } from '@/types'
+import IconRoot from './icons/IconRoot.vue'
+import IconSequence from './icons/IconSequence.vue'
+import IconFallback from './icons/IconFallback.vue'
+import IconParallel from './icons/IconParallel.vue'
+import IconDecorator from './icons/IconDecorator.vue'
+import IconAction from './icons/IconAction.vue'
+import IconCondition from './icons/IconCondition.vue'
+import IconSubtree from './icons/IconSubtree.vue'
 import { useTreeStore, getNodePorts, getNodeHeight, measureTextWidth } from '@/stores/treeStore'
 
 const props = defineProps<{ node: TreeNode }>()
@@ -100,18 +108,18 @@ const statusClass = computed(() => {
 
 const typeClass = computed(() => `type-${props.node.type}`)
 
-const ICONS: Record<string, string> = {
-  root: '🌳',
-  sequence: '→',
-  fallback: '?',
-  parallel: '⇉',
-  decorator: '↻',
-  action: '⚡',
-  condition: '≠×',
-  subtree: '📦',
+const ICONS: Record<string, Component> = {
+  root: IconRoot,
+  sequence: IconSequence,
+  fallback: IconFallback,
+  parallel: IconParallel,
+  decorator: IconDecorator,
+  action: IconAction,
+  condition: IconCondition,
+  subtree: IconSubtree,
 }
 
-const nodeIcon = computed(() => ICONS[props.node.type] ?? '●')
+const nodeIcon = computed(() => ICONS[props.node.type] ?? IconAction)
 
 const maxValueWidth = computed(() => {
   let max = 20
@@ -125,15 +133,15 @@ const maxValueWidth = computed(() => {
 
 <style scoped>
 .port-in {
-  fill: #4ecdc4;
+  fill: var(--port-in);
   font-weight: 600;
 }
 .port-out {
-  fill: #f39c12;
+  fill: var(--port-out);
   font-weight: 600;
 }
 .port-value-bg {
-  fill: #ffffff;
+  fill: var(--port-value-bg);
 }
 .port-divider {
   stroke: var(--border-color);
@@ -142,41 +150,45 @@ const maxValueWidth = computed(() => {
 .is-subtree .node-box {
   stroke-dasharray: 4 2;
 }
-/* Control node name and icon: pink */
+/* Control node name and icon */
 .type-sequence .node-title,
-.type-sequence .node-icon,
 .type-fallback .node-title,
-.type-fallback .node-icon,
-.type-parallel .node-title,
-.type-parallel .node-icon {
-  fill: #ff79c6;
+.type-parallel .node-title {
+  fill: var(--node-control);
 }
-/* Decorator node name and icon: teal */
-.type-decorator .node-title,
+.type-sequence .node-icon,
+.type-fallback .node-icon,
+.type-parallel .node-icon {
+  color: var(--node-control);
+}
+/* Decorator node name and icon */
+.type-decorator .node-title {
+  fill: var(--node-decorator);
+}
 .type-decorator .node-icon {
-  fill: #4ecdc4;
+  color: var(--node-decorator);
 }
 /* Subtree toggle button */
 .subtree-toggle {
   cursor: pointer;
 }
 .toggle-btn-bg {
-  fill: var(--bg-tertiary, #1f1f2e);
-  stroke: var(--border-light, #52525b);
+  fill: var(--bg-tertiary);
+  stroke: var(--border-light);
   stroke-width: 1;
   transition: all 0.2s;
 }
 .subtree-toggle:hover .toggle-btn-bg {
-  fill: var(--connection-color, #4ecdc4);
-  stroke: var(--connection-color, #4ecdc4);
+  fill: var(--connection-color);
+  stroke: var(--connection-color);
 }
 .toggle-btn-icon-line {
-  stroke: var(--text-primary, #e4e4e7);
+  stroke: var(--text-primary);
   stroke-width: 1.8;
   stroke-linecap: round;
   pointer-events: none;
 }
 .subtree-toggle:hover .toggle-btn-icon-line {
-  stroke: var(--bg-primary, #2d2d42);
+  stroke: var(--bg-primary);
 }
 </style>
