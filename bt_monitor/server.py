@@ -225,10 +225,16 @@ class Groot2WebBridge:
         if not self.recording:
             return
         self.recording = False
-        if self.transitions_task:
-            self.transitions_task.cancel()
-            self.transitions_task = None
+        # Never cancel the transitions task: it may hold the request lock
+        # mid-round-trip, and a cancel would strand the REQ socket. It exits
+        # by itself once recording is False.
         await self._send_request(RequestType.TOGGLE_RECORDING, b'stop')
+        task, self.transitions_task = self.transitions_task, None
+        if task:
+            try:
+                await asyncio.wait_for(task, 1.0)
+            except (asyncio.TimeoutError, asyncio.CancelledError):
+                pass
         await self._broadcast_recording()
 
     async def _broadcast_recording(self):
@@ -287,7 +293,9 @@ class Groot2WebBridge:
     async def transitions_polling_loop(self):
         while True:
             try:
-                if self.connected and self.recording:
+                if not self.recording:
+                    break
+                if self.connected:
                     reply = await self._send_request(RequestType.GET_TRANSITIONS)
                     if reply and len(reply) >= 2:
                         records = parse_transitions(reply[1], self.start_epoch_us)
@@ -320,7 +328,6 @@ class Groot2WebBridge:
                 setattr(self, name, None)
 
     async def cleanup(self):
-        self.stop_polling()
         await self.disconnect_zmq()
         if self.zmq_context:
             self.zmq_context.term()

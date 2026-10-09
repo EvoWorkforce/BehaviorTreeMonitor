@@ -6,7 +6,7 @@ Logs every request type it receives, so tests can assert what a client sent.
 import asyncio
 import struct
 from pathlib import Path
-from typing import List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 import zmq
 import zmq.asyncio
@@ -23,6 +23,7 @@ class FakeGroot2:
     def __init__(self) -> None:
         self.requests: List[Tuple[str, bytes]] = []
         self.error_on: Set[str] = set()
+        self.delay_s: Dict[str, float] = {}
         self.start_epoch_us = 1760000000000000
         self._pending_transitions = _record(1000, 5, 1) + _record(2000, 5, 2)
         self._ctx = zmq.asyncio.Context()
@@ -65,6 +66,8 @@ class FakeGroot2:
             rtype = chr(head[1])
             payload = parts[1] if len(parts) > 1 else b""
             self.requests.append((rtype, payload))
+            if rtype in self.delay_s:
+                await asyncio.sleep(self.delay_s[rtype])
             if rtype in self.error_on:
                 await self._sock.send_multipart([b"error", b"fake failure"])
                 continue

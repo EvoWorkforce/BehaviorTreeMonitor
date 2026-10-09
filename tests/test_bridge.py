@@ -137,3 +137,27 @@ async def test_error_reply_not_disconnect(bridge, fake):
     assert len(bridge.ws.of_type("error")) == 1
     assert bridge.connected
     assert not bridge.ws.of_type("disconnected")
+
+
+async def _start_recording_with_slow_transitions(bridge, fake):
+    fake.delay_s["t"] = 0.3
+    await bridge.record_start()
+    assert bridge.recording
+    assert await wait_for(lambda: fake.count("t") >= 1)
+
+
+async def test_record_stop_while_transitions_in_flight(bridge, fake):
+    await _start_recording_with_slow_transitions(bridge, fake)
+    await bridge.record_stop()
+    assert await wait_for(lambda: b"stop" in [p for t, p in fake.requests if t == "r"])
+    before = fake.count("S")
+    assert await bridge._request_status() is not None
+    assert fake.count("S") == before + 1
+    assert bridge.connected
+    assert not bridge.ws.of_type("disconnected")
+
+
+async def test_cleanup_sends_record_stop_while_in_flight(bridge, fake):
+    await _start_recording_with_slow_transitions(bridge, fake)
+    await bridge.cleanup()
+    assert b"stop" in [p for t, p in fake.requests if t == "r"]
