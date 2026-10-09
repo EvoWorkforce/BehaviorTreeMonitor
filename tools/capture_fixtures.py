@@ -58,9 +58,10 @@ def main() -> int:
     tree = request(sock, "T")[1]
     (out / "aom_fulltree.xml").write_bytes(tree)
     root = ET.fromstring(tree.decode("utf-8"))
-    blocks = [bt.get("_fullpath") for bt in root.iter("BehaviorTree")]
-    names = [n for n in blocks if n is not None]
-    print(f"BehaviorTree blocks: {len(blocks)}, with _fullpath: {len(names)}")
+    blocks = [bt for bt in root.iter("BehaviorTree") if bt.get("_fullpath") is not None]
+    # The publisher keys a block with an empty instance name (the root) by its tree ID.
+    names = [bt.get("_fullpath") or bt.get("ID") for bt in blocks]
+    print(f"BehaviorTree blocks with _fullpath: {len(blocks)}, blackboard names: {names}")
 
     (out / "aom_status.bin").write_bytes(request(sock, "S")[1])
 
