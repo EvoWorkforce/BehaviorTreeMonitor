@@ -215,6 +215,7 @@ html, body {
 .bb-tree summary { cursor: pointer; color: var(--text-muted); }
 .bb-child { margin-left: 10px; display: flex; gap: 6px; flex-wrap: wrap; }
 .bb-key { color: var(--text-secondary); }
+.bb-type { color: var(--text-muted); font-style: italic; }
 .port-live { fill: var(--connection-color); font-family: var(--font-mono); font-size: 8px; }
 .port-live.null { fill: var(--text-muted); }
 
