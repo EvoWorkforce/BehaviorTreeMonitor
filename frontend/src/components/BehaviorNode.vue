@@ -13,7 +13,11 @@
     <component :is="nodeIcon" class="node-icon" x="6" y="8" width="12" height="12" />
 
     <!-- Name (centred in the area right of the icon) -->
-    <text class="node-title" :x="(22 + props.node.width - (props.node.isSubtreeContainer ? 20 : 0)) / 2" y="15" text-anchor="middle">{{ props.node.name }}</text>
+    <text
+      class="node-title"
+      :class="{ 'subtree-link': openPath }"
+      @click="openPath && $emit('open-subtree', openPath)"
+      :x="(22 + props.node.width - (props.node.isSubtreeContainer ? 20 : 0)) / 2" y="15" text-anchor="middle">{{ props.node.name }}</text>
 
     <!-- Subtree expand/collapse button -->
     <g v-if="props.node.isSubtreeContainer" class="subtree-toggle" @click.stop="$emit('toggle-subtree', props.node)">
@@ -93,6 +97,7 @@ import IconAction from './icons/IconAction.vue'
 import IconCondition from './icons/IconCondition.vue'
 import IconSubtree from './icons/IconSubtree.vue'
 import { useBlackboardStore } from '@/stores/blackboardStore'
+import { subtreeOpenPath } from '@/lib/instances'
 import { describeNull, resolvePortValue } from '@/lib/blackboard'
 import { summarize } from '@/lib/format'
 import { useTreeStore, getNodePorts, getNodeHeight, measureTextWidth } from '@/stores/treeStore'
@@ -102,9 +107,12 @@ defineEmits<{
   mouseenter: [event: MouseEvent, node: TreeNode]
   mouseleave: []
   'toggle-subtree': [node: TreeNode]
+  'open-subtree': [path: string]
 }>()
 
 const store = useTreeStore()
+// A SubTree node's name opens its instance alone, like the instance rail.
+const openPath = computed(() => subtreeOpenPath(props.node, store.instances))
 const bb = useBlackboardStore()
 
 /** The blackboard value behind a `{key}` port, or null when the port is a literal or unknown. */

@@ -57,3 +57,17 @@ export function breadcrumb(path: string): BreadcrumbSegment[] {
   const parts = path.split('/')
   return parts.map((label, i) => ({ label, path: parts.slice(0, i + 1).join('/') }))
 }
+
+/**
+ * The instance path to open when a SubTree node's name is clicked: its `_fullpath`, if the node is a
+ * SubTree container and that path is an instance in `root`; otherwise null.
+ */
+export function subtreeOpenPath(
+  node: { isSubtreeContainer?: boolean; attributes: Record<string, string> },
+  root: InstanceNode | null,
+): string | null {
+  const path = node.isSubtreeContainer ? node.attributes['_fullpath'] : undefined
+  if (!path || !root) return null
+  const has = (n: InstanceNode): boolean => n.path === path || n.children.some(has)
+  return has(root) ? path : null
+}

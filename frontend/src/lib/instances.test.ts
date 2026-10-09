@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { breadcrumb, buildInstanceTree } from '@/lib/instances'
+import { breadcrumb, buildInstanceTree, subtreeOpenPath } from '@/lib/instances'
 import xml from '../../../tests/fixtures/aom_fulltree.xml?raw'
 
 const doc = () => new DOMParser().parseFromString(xml, 'text/xml')
@@ -63,5 +63,26 @@ describe('breadcrumb', () => {
   })
   it('is empty for the root', () => {
     expect(breadcrumb('')).toEqual([])
+  })
+})
+
+describe('subtreeOpenPath', () => {
+  const sub = (fullpath?: string) => ({
+    isSubtreeContainer: true,
+    attributes: (fullpath === undefined ? {} : { _fullpath: fullpath }) as Record<string, string>,
+  })
+
+  it('is the _fullpath of a SubTree node that names a known instance', () => {
+    const root = buildInstanceTree(doc())
+    expect(subtreeOpenPath(sub('main_patrol_route'), root)).toBe('main_patrol_route')
+    expect(subtreeOpenPath(sub('main_patrol_route/RouteSection::25'), root)).toBe('main_patrol_route/RouteSection::25')
+  })
+
+  it('is null for a non-SubTree node, a missing or unknown path, or no instance tree', () => {
+    const root = buildInstanceTree(doc())
+    expect(subtreeOpenPath({ isSubtreeContainer: false, attributes: { _fullpath: 'main_patrol_route' } }, root)).toBeNull()
+    expect(subtreeOpenPath(sub(), root)).toBeNull()
+    expect(subtreeOpenPath(sub('nope'), root)).toBeNull()
+    expect(subtreeOpenPath(sub('main_patrol_route'), null)).toBeNull()
   })
 })

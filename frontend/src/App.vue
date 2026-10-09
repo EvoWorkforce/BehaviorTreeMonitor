@@ -53,6 +53,7 @@
                 @mouseenter="showTooltip"
                 @mouseleave="hideTooltip"
                 @toggle-subtree="onToggleSubtree"
+                @open-subtree="onOpenSubtree"
               />
             </g>
           </g>
@@ -256,10 +257,13 @@ function panToNode(node: TreeNode) {
   panY.value = rect.height / 2 - (node.y + getNodeHeight(node) / 2) * zoom.value
 }
 
+let dragDistance = 0
+
 function onMouseDown(e: MouseEvent) {
   if (e.button === 0) {
     follow.value = false
     isDragging.value = true
+    dragDistance = 0
     lastMouse.x = e.clientX
     lastMouse.y = e.clientY
   }
@@ -267,6 +271,7 @@ function onMouseDown(e: MouseEvent) {
 
 function onMouseMove(e: MouseEvent) {
   if (isDragging.value) {
+    dragDistance += Math.abs(e.clientX - lastMouse.x) + Math.abs(e.clientY - lastMouse.y)
     panX.value += e.clientX - lastMouse.x
     panY.value += e.clientY - lastMouse.y
     lastMouse.x = e.clientX
@@ -326,6 +331,11 @@ function onToggleLayout() {
 function onToggleSubtree(node: TreeNode) {
   store.toggleSubtree(node)
   nextTick(() => setTimeout(zoomFit, 100))
+}
+
+// A drag that ends on a subtree name pans only; the browser still fires click after it.
+function onOpenSubtree(path: string) {
+  if (dragDistance <= 3) onSelectInstance(path)
 }
 
 function onSelectInstance(path: string) {

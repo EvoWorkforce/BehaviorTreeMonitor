@@ -135,6 +135,8 @@ html, body {
 
 .node-icon { font-size: 12px; fill: var(--text-secondary); dominant-baseline: middle; }
 .node-title { font-size: 12px; font-weight: 600; fill: var(--text-primary); dominant-baseline: middle; }
+.node-title.subtree-link { cursor: pointer; }
+.node-title.subtree-link:hover { text-decoration: underline; fill: var(--connection-color); }
 
 .port-group { font-size: 10px; }
 .port-label { fill: var(--text-secondary); }
