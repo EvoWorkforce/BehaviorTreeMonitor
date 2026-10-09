@@ -197,6 +197,8 @@ html, body {
 .bottom-drawer { flex: none; overflow: auto; background: var(--bg-secondary); border-top: 1px solid var(--border-color); }
 
 .btn-icon { padding: 6px 8px; }
+.panel-toggles { display: flex; gap: 4px; margin-left: auto; margin-right: 16px; }
+.btn-icon[aria-pressed="true"] { color: var(--connection-color); border-color: var(--connection-color); }
 .btn svg { width: 16px; height: 16px; }
 .toolbar-logo { width: 24px; height: 24px; display: block; }
 

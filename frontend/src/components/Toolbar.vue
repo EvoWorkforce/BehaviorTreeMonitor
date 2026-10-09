@@ -7,6 +7,18 @@
       </div>
     </div>
 
+    <div class="panel-toggles" role="group" aria-label="Panels">
+      <button class="btn btn-icon" :aria-pressed="panels.leftOpen" title="Instances ( [ )" @click="toggle('left')">
+        <IconPanelLeft />
+      </button>
+      <button class="btn btn-icon" :aria-pressed="panels.bottomOpen" title="Timeline" @click="toggle('bottom')">
+        <IconPanelBottom />
+      </button>
+      <button class="btn btn-icon" :aria-pressed="panels.rightOpen" title="Blackboard ( ] )" @click="toggle('right')">
+        <IconPanelRight />
+      </button>
+    </div>
+
     <div class="connection-panel">
       <input v-model="store.host" class="host" type="text" placeholder="localhost" :disabled="store.connected" />
       <span style="color: var(--text-muted)">:</span>
@@ -31,6 +43,10 @@
 import { computed } from 'vue'
 import { useTreeStore } from '../stores/treeStore'
 import { useTheme } from '../composables/useTheme'
+import { usePanels } from '../composables/usePanels'
+import IconPanelLeft from './icons/IconPanelLeft.vue'
+import IconPanelBottom from './icons/IconPanelBottom.vue'
+import IconPanelRight from './icons/IconPanelRight.vue'
 import IconSun from './icons/IconSun.vue'
 import IconMoon from './icons/IconMoon.vue'
 
@@ -41,6 +57,7 @@ const props = defineProps<{
 
 const store = useTreeStore()
 const { theme, toggle: toggleTheme } = useTheme()
+const { panels, toggle } = usePanels()
 
 function toggleConnection() {
   if (store.connected) {
