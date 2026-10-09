@@ -4,7 +4,7 @@ import asyncio
 import json
 import os
 import logging
-from typing import Optional, Dict
+from typing import Any, Optional, Dict
 from urllib.parse import urlparse
 
 import zmq
@@ -14,7 +14,9 @@ import aiohttp
 
 from .protocol import (
     RequestType, NodeStatus,
-    create_request_header, parse_reply_header, parse_status_buffer,
+    Groot2Error, assert_read_only, check_reply, create_request_header,
+    decode_blackboard, parse_recording_start, parse_reply_header,
+    parse_status_buffer, parse_transitions,
 )
 
 logger = logging.getLogger(__name__)
@@ -34,6 +36,12 @@ class Groot2WebBridge:
         self.last_error: Optional[str] = None
         self.websockets: set = set()
         self.status_poll_task: Optional[asyncio.Task] = None
+        self.bb_poll_task: Optional[asyncio.Task] = None
+        self.transitions_task: Optional[asyncio.Task] = None
+        self.bb_target: str = ""
+        self.recording: bool = False
+        self.start_epoch_us: int = 0
+        self._last_error: Optional[str] = None
         self._lock = asyncio.Lock()
 
     @staticmethod
@@ -118,6 +126,9 @@ class Groot2WebBridge:
             return False
 
     async def disconnect_zmq(self):
+        # Stop the recording first: the lock waits for any request in flight,
+        # so cancelling the poll tasks cannot strand the REQ socket mid-reply.
+        await self._stop_recording()
         self.stop_polling()
         if self.zmq_socket:
             self.zmq_socket.close()
@@ -128,6 +139,7 @@ class Groot2WebBridge:
         logger.info("ZeroMQ disconnected")
 
     async def _send_request(self, request_type: int, payload: bytes = b'') -> Optional[list]:
+        assert_read_only(request_type)
         async with self._lock:
             if not self.zmq_socket:
                 return None
@@ -137,7 +149,13 @@ class Groot2WebBridge:
                     await self.zmq_socket.send_multipart([header, payload])
                 else:
                     await self.zmq_socket.send(header)
-                return await self.zmq_socket.recv_multipart()
+                return check_reply(await self.zmq_socket.recv_multipart())
+            except Groot2Error as e:
+                logger.warning(f"Groot2 error reply: {e}")
+                if str(e) != self._last_error:
+                    self._last_error = str(e)
+                    await self.broadcast({'type': 'error', 'message': str(e)})
+                return None
             except zmq.error.Again:
                 logger.warning("ZeroMQ request timed out")
                 await self._reconnect()
@@ -172,11 +190,53 @@ class Groot2WebBridge:
             return parse_status_buffer(reply[1])
         return None
 
-    async def _request_blackboard(self, bb_names: str = "") -> Optional[bytes]:
+    async def _request_blackboard(self, bb_names: str) -> Optional[Dict[str, Dict[str, Any]]]:
+        # An empty name list is never sent: the publisher rejects a one-part request.
+        if not bb_names:
+            return None
         reply = await self._send_request(RequestType.BLACKBOARD, bb_names.encode('utf-8'))
         if reply and len(reply) >= 2:
-            return reply[1]
+            self._last_error = None
+            return decode_blackboard(reply[1])
         return None
+
+    async def set_blackboard_target(self, names: str):
+        self.bb_target = (names or "").strip()
+
+    async def record_start(self):
+        if self.recording or not self.connected:
+            return
+        reply = await self._send_request(RequestType.TOGGLE_RECORDING, b'start')
+        if not reply:
+            return
+        start = parse_recording_start(reply)
+        if start is None:
+            return
+        self.recording = True
+        self.start_epoch_us = start
+        await self._broadcast_recording()
+        if self.transitions_task is None or self.transitions_task.done():
+            self.transitions_task = asyncio.create_task(self.transitions_polling_loop())
+
+    async def record_stop(self):
+        await self._stop_recording()
+
+    async def _stop_recording(self):
+        if not self.recording:
+            return
+        self.recording = False
+        if self.transitions_task:
+            self.transitions_task.cancel()
+            self.transitions_task = None
+        await self._send_request(RequestType.TOGGLE_RECORDING, b'stop')
+        await self._broadcast_recording()
+
+    async def _broadcast_recording(self):
+        await self.broadcast({
+            'type': 'recording',
+            'active': self.recording,
+            'start_epoch_us': self.start_epoch_us,
+        })
 
     async def broadcast(self, message: dict):
         if not self.websockets:
@@ -210,14 +270,54 @@ class Groot2WebBridge:
                 logger.error(f"Status poll error: {e}")
                 await asyncio.sleep(1)
 
+    async def bb_polling_loop(self):
+        while True:
+            try:
+                if self.connected and self.websockets and self.bb_target:
+                    data = await self._request_blackboard(self.bb_target)
+                    if data is not None:
+                        await self.broadcast({'type': 'blackboard', 'data': data})
+                await asyncio.sleep(0.25)
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"Blackboard poll error: {e}")
+                await asyncio.sleep(1)
+
+    async def transitions_polling_loop(self):
+        while True:
+            try:
+                if self.connected and self.recording:
+                    reply = await self._send_request(RequestType.GET_TRANSITIONS)
+                    if reply and len(reply) >= 2:
+                        records = parse_transitions(reply[1], self.start_epoch_us)
+                        if records:
+                            await self.broadcast({
+                                'type': 'transitions',
+                                'data': [
+                                    {'timestamp_us': r.timestamp_us, 'uid': r.uid, 'status': r.status}
+                                    for r in records
+                                ],
+                            })
+                await asyncio.sleep(0.1)
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"Transitions poll error: {e}")
+                await asyncio.sleep(1)
+
     def start_polling(self):
         if self.status_poll_task is None or self.status_poll_task.done():
             self.status_poll_task = asyncio.create_task(self.status_polling_loop())
+        if self.bb_poll_task is None or self.bb_poll_task.done():
+            self.bb_poll_task = asyncio.create_task(self.bb_polling_loop())
 
     def stop_polling(self):
-        if self.status_poll_task:
-            self.status_poll_task.cancel()
-            self.status_poll_task = None
+        for name in ('status_poll_task', 'bb_poll_task', 'transitions_task'):
+            task = getattr(self, name)
+            if task:
+                task.cancel()
+                setattr(self, name, None)
 
     async def cleanup(self):
         self.stop_polling()
@@ -263,6 +363,8 @@ async def _ws_handler(request: web.Request) -> web.WebSocketResponse:
                 logger.error(f'WebSocket error: {ws.exception()}')
     finally:
         bridge.websockets.discard(ws)
+        if not bridge.websockets:
+            await bridge.record_stop()
         logger.info(f"WebSocket closed: {request.remote}")
     return ws
 
@@ -309,14 +411,22 @@ async def _handle_ws_message(ws: web.WebSocketResponse, data: dict):
 
     elif msg_type == 'get_blackboard':
         if bridge.connected:
-            bb_names = data.get('names', '')
-            bb_data = await bridge._request_blackboard(bb_names)
-            if bb_data:
-                await ws.send_json({'type': 'blackboard', 'data': bb_data.hex()})
-            else:
-                await ws.send_json({'type': 'blackboard', 'data': None})
+            bb_data = await bridge._request_blackboard(data.get('names', ''))
+            await ws.send_json({'type': 'blackboard', 'data': bb_data})
         else:
             await ws.send_json({'type': 'error', 'message': 'Not connected to the server'})
+
+    elif msg_type == 'set_blackboard_target':
+        await bridge.set_blackboard_target(data.get('names', ''))
+
+    elif msg_type == 'record_start':
+        if bridge.connected:
+            await bridge.record_start()
+        else:
+            await ws.send_json({'type': 'error', 'message': 'Not connected to the server'})
+
+    elif msg_type == 'record_stop':
+        await bridge.record_stop()
 
     else:
         await ws.send_json({'type': 'error', 'message': f'Unknown message type: {msg_type}'})
