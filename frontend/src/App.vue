@@ -113,7 +113,7 @@
           </div>
         </div>
       </div>
-      <aside v-if="panels.rightOpen" class="right-rail" :style="{ width: panels.rightWidth + 'px' }" aria-label="Data"></aside>
+      <BlackboardRail v-if="panels.rightOpen" :style="{ width: panels.rightWidth + 'px' }" />
     </main>
     <section v-if="panels.bottomOpen" class="bottom-drawer" :style="{ height: panels.bottomHeight + 'px' }" aria-label="Timeline"></section>
   </div>
@@ -125,6 +125,7 @@ import BehaviorNode from './components/BehaviorNode.vue'
 import Toolbar from './components/Toolbar.vue'
 import InstanceRail from './components/InstanceRail.vue'
 import Breadcrumb from './components/Breadcrumb.vue'
+import BlackboardRail from './components/BlackboardRail.vue'
 import IconPlus from './components/icons/IconPlus.vue'
 import IconMinus from './components/icons/IconMinus.vue'
 import IconFit from './components/icons/IconFit.vue'
@@ -134,9 +135,12 @@ import IconLayoutV from './components/icons/IconLayoutV.vue'
 import { useTreeStore, getNodeHeight } from './stores/treeStore'
 import { useWebSocket } from './composables/useWebSocket'
 import { usePanels } from './composables/usePanels'
-import type { TreeNode, WsMessage } from './types'
+import { useBlackboardStore } from './stores/blackboardStore'
+import { bbNameForPath, extractPortTypes } from './lib/blackboard'
+import type { BlackboardMap, TreeNode, WsMessage } from './types'
 
 const store = useTreeStore()
+const bb = useBlackboardStore()
 const connectionError = ref('')
 const { panels } = usePanels()
 
@@ -155,13 +159,13 @@ function handleMessage(msg: WsMessage) {
         console.error('Connection failed:', msg.message)
       }
       if (msg.connected && msg.tree_xml) {
-        store.parseTree(msg.tree_xml)
+        loadTree(msg.tree_xml)
         nextTick(() => setTimeout(zoomFit, 100))
       }
       break
     case 'tree':
       if (typeof msg.data === 'string') {
-        store.parseTree(msg.data)
+        loadTree(msg.data)
         nextTick(() => setTimeout(zoomFit, 100))
       }
       break
@@ -169,6 +173,9 @@ function handleMessage(msg: WsMessage) {
       if (msg.data && typeof msg.data === 'object') {
         store.updateStatus(msg.data as Record<string, string>)
       }
+      break
+    case 'blackboard':
+      bb.update(msg.data as unknown as BlackboardMap | null)
       break
     case 'disconnected':
       store.connected = false
@@ -179,6 +186,20 @@ function handleMessage(msg: WsMessage) {
       store.connecting = false
       break
   }
+}
+
+// Parses a tree, then points the blackboard poll at the root instance.
+function loadTree(xml: string) {
+  store.parseTree(xml)
+  bb.setPortTypes(extractPortTypes(new DOMParser().parseFromString(xml, 'text/xml')))
+  setBlackboardTarget('')
+}
+
+function setBlackboardTarget(path: string) {
+  const name = bbNameForPath(store.instances, path)
+  if (!name) return
+  bb.setTarget(name)
+  wsSend({ type: 'set_blackboard_target', names: name })
 }
 
 // ---- Computed properties ----
@@ -310,7 +331,10 @@ function onToggleSubtree(node: TreeNode) {
 }
 
 function onSelectInstance(path: string) {
-  if (store.selectInstance(path)) nextTick(() => setTimeout(zoomFit, 50))
+  if (store.selectInstance(path)) {
+    setBlackboardTarget(path)
+    nextTick(() => setTimeout(zoomFit, 50))
+  }
 }
 
 // ---- Tooltip ----

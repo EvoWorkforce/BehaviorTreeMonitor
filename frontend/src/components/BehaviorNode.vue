@@ -66,6 +66,16 @@
         <text class="port-value" :x="props.node.width - maxValueWidth - 6" y="13" text-anchor="start">
           {{ port.value }}
         </text>
+        <text
+          v-if="live(port) !== null"
+          class="port-live"
+          :class="{ null: live(port)!.isNull }"
+          :x="props.node.width + 6"
+          y="13"
+        >
+          {{ live(port)!.text }}
+          <title v-if="live(port)!.hint">{{ live(port)!.hint }}</title>
+        </text>
       </g>
     </g>
   </g>
@@ -82,6 +92,9 @@ import IconDecorator from './icons/IconDecorator.vue'
 import IconAction from './icons/IconAction.vue'
 import IconCondition from './icons/IconCondition.vue'
 import IconSubtree from './icons/IconSubtree.vue'
+import { useBlackboardStore } from '@/stores/blackboardStore'
+import { describeNull, resolvePortValue } from '@/lib/blackboard'
+import { summarize } from '@/lib/format'
 import { useTreeStore, getNodePorts, getNodeHeight, measureTextWidth } from '@/stores/treeStore'
 
 const props = defineProps<{ node: TreeNode }>()
@@ -92,6 +105,18 @@ defineEmits<{
 }>()
 
 const store = useTreeStore()
+const bb = useBlackboardStore()
+
+/** The blackboard value behind a `{key}` port, or null when the port is a literal or unknown. */
+function live(port: NodePort): { text: string; isNull: boolean; hint?: string } | null {
+  const v = resolvePortValue(port.value, bb.current)
+  if (v === undefined) return null
+  if (v === null) {
+    const key = port.value.trim().slice(1, -1)
+    return { text: 'null', isNull: true, hint: describeNull(key, bb.portTypes) }
+  }
+  return { text: summarize(v), isNull: false }
+}
 
 const height = computed(() => getNodeHeight(props.node))
 const ports = computed<NodePort[]>(() => getNodePorts(props.node))
