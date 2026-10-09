@@ -1,21 +1,27 @@
-# BehaviorTree Monitor
+# Evo Behavior Tree Monitor
 
-A live behavior tree monitor built on the [BehaviorTree.CPP](https://github.com/BehaviorTree/BehaviorTree.CPP) Groot2 protocol. It shows the status of 20 or more nodes, including nodes inside subtrees.
+A live, read-only behavior tree monitor built on the
+[BehaviorTree.CPP](https://github.com/BehaviorTree/BehaviorTree.CPP) Groot2 protocol. It shows node
+status, the live blackboard of each subtree instance, and a recorded timeline of status transitions.
+
+The monitor only sends read requests (tree, status, blackboard, recording, transitions). It never
+inserts hooks or changes the tree.
 
 ## Architecture
 
 ```
-Python (PySide6 + aiohttp)          Vue 3 + TypeScript
-┌─────────────────────┐           ┌──────────────────┐
-│  Qt WebEngineView   │──HTTP──►  │  Frontend (dist/)  │
-│  aiohttp Server     │◄─WS───►   │  WebSocket client │
-│  ZMQ Bridge         │◄─ZMQ──►   │                  │
-└─────────────────────┘           └──────────────────┘
-                                        ▲
-                                        │ ZMQ REQ/REP
-                                        ▼
-                                  BT.CPP executor
-                                  (Groot2Publisher)
+Python (aiohttp, optional PySide6)    Vue 3 + TypeScript
+┌─────────────────────┐             ┌────────────────────────┐
+│  aiohttp server     │──HTTP────►  │  Page (bt_monitor/static) │
+│  WebSocket bridge   │◄─WS──────►  │  WebSocket client       │
+│  ZMQ client         │             └────────────────────────┘
+│  Qt window (opt.)   │
+└─────────────────────┘
+          ▲
+          │ ZMQ REQ/REP
+          ▼
+    BT.CPP executor
+    (Groot2Publisher, port 1667)
 ```
 
 ## Preview
@@ -24,24 +30,50 @@ Python (PySide6 + aiohttp)          Vue 3 + TypeScript
 
 ![](./sample2.png)
 
+## Features
+
+- Instance rail: every subtree instance, with a status dot; open one alone, with a breadcrumb.
+- Blackboard rail: live values for the selected instance (4 Hz), with change flash and pinned keys.
+  Values on `{key}` ports show beside the node.
+- Transition timeline: record, swim lanes per node, a log, JSON export. Recording clears the
+  publisher's transition buffer for every client; do not record with Groot2 at the same time.
+- Search (`/`), follow the deepest running node, light and dark themes, `[` and `]` toggle the rails.
+
+## Run
+
+Headless (default): serve the page and open it in a browser.
+
+```bash
+pip install .
+evo-behavior-tree-monitor            # http://127.0.0.1:18080
+evo-behavior-tree-monitor --bind 0.0.0.0 --port 19000
+python -m bt_monitor --help
+```
+
+The port can also come from `EVO_BTM_PORT`; `--port` wins. If the port is busy, the monitor exits
+with a message that names `--port`.
+
+Desktop window (needs Qt):
+
+```bash
+pip install ".[qt]"
+evo-behavior-tree-monitor --window
+```
+
 ## Project layout
 
 ```
 BehaviorTreeMonitor/
-├── main.py                 # entry point
+├── main.py                 # entry point (calls bt_monitor.cli)
 ├── bt_monitor/
-│   ├── protocol.py         # BT.CPP Groot2 protocol
+│   ├── cli.py              # arguments, port check, headless or window
+│   ├── protocol.py         # Groot2 protocol encoding and decoding
 │   ├── server.py           # aiohttp WebSocket/ZMQ bridge
-│   └── app.py              # Qt WebEngine window
-├── frontend/               # Vue 3 + TypeScript
-│   ├── src/
-│   │   ├── App.vue
-│   │   ├── components/
-│   │   ├── composables/
-│   │   ├── stores/
-│   │   ├── types/
-│   │   └── styles/
-│   └── ...
+│   ├── app.py              # HTTP server and optional Qt window
+│   └── static/             # built page (generated, not tracked)
+├── frontend/               # Vue 3 + TypeScript; pure logic in src/lib/
+├── tests/                  # pytest, fake Groot2 publisher, aom fixtures
+├── tools/capture_fixtures.py
 └── bt_monitor.spec         # PyInstaller config
 ```
 
@@ -50,48 +82,41 @@ BehaviorTreeMonitor/
 ### Requirements
 
 - [uv](https://docs.astral.sh/uv/) (Python package manager)
-- Node.js 18+ & pnpm
+- Node.js 20 and pnpm 10 (pinned through `packageManager`; `corepack enable` picks it)
 
 ### Install dependencies
 
 ```bash
-# Python dependencies
-uv sync
-
-# Frontend dependencies
+uv sync --group dev --extra qt
 cd frontend && pnpm install
 ```
 
-### Run in development
-
-- Build the frontend
+### Build the page and run
 
 ```bash
-cd frontend
-pnpm build
+cd frontend && pnpm build          # writes bt_monitor/static/
+uv run python -m bt_monitor
 ```
 
-- Start the application
+### Test
 
 ```bash
-uv run python main.py
+cd frontend && pnpm test           # Vitest
+uv run pytest                      # pytest
 ```
+
+`tools/capture_fixtures.py` records the fixtures in `tests/fixtures/` from a running publisher.
 
 ### Build a release
 
 ```bash
-# 1. Build the frontend
 cd frontend && pnpm install && pnpm build
-
-# 2. Bundle with PyInstaller
 uv run --group dev pyinstaller --clean --noconfirm bt_monitor.spec
 ```
 
 Output file: `dist/BehaviorTreeMonitor`
 
-## Download and run
+## Origin
 
-To skip the build, download a compiled version from the [releases page](https://github.com/riyuexingchennnn/BehaviorTreeMonitor/releases).
-
-Note: on Ubuntu, run `chmod +x` on the file before you start it.
-
+This is the Evo fork of
+[riyuexingchennnn/BehaviorTreeMonitor](https://github.com/riyuexingchennnn/BehaviorTreeMonitor).
