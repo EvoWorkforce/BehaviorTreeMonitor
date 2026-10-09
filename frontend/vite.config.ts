@@ -22,7 +22,7 @@ export default defineConfig({
     environment: 'happy-dom',
   },
   build: {
-    outDir: '../dist',
+    outDir: '../bt_monitor/static',
     emptyOutDir: true,
   },
 })

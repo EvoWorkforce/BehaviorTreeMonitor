@@ -3,7 +3,7 @@
 
 Bundle the Python backend and the built Vue frontend into one executable.
 Usage:
-  1. cd frontend && pnpm install && pnpm build   # writes dist/
+  1. cd frontend && pnpm install && pnpm build   # writes bt_monitor/static/
   2. uv run --group dev pyinstaller bt_monitor.spec  # bundle
 """
 
@@ -18,7 +18,7 @@ a = Analysis(
     binaries=[],
     datas=[
         # Bundle the frontend build output
-        (os.path.join(ROOT, 'dist'), 'dist'),
+        (os.path.join(ROOT, 'bt_monitor', 'static'), 'bt_monitor/static'),
         # Application resources (icons etc.)
         (os.path.join(ROOT, 'resources'), 'resources'),
     ],
