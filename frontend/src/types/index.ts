@@ -1,4 +1,4 @@
-/** 行为树节点类型 */
+/** Behavior tree node type */
 export type BtNodeType =
   | 'root'
   | 'sequence'
@@ -9,7 +9,7 @@ export type BtNodeType =
   | 'condition'
   | 'subtree'
 
-/** 节点状态 */
+/** Node status */
 export type NodeStatusStr =
   | 'IDLE'
   | 'RUNNING'
@@ -21,14 +21,14 @@ export type NodeStatusStr =
   | 'IDLE_FROM_RUNNING'
   | 'UNKNOWN'
 
-/** 端口 */
+/** Port */
 export interface NodePort {
   name: string
   value: string
   isOutput: boolean
 }
 
-/** 解析后的树节点 */
+/** Parsed tree node */
 export interface TreeNode {
   tag: string
   name: string
@@ -49,7 +49,7 @@ export interface TreeNode {
   treeHeight?: number
 }
 
-/** WebSocket 消息 */
+/** WebSocket message */
 export interface WsMessage {
   type: string
   connected?: boolean

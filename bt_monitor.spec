@@ -1,10 +1,10 @@
 # -*- mode: python ; coding: utf-8 -*-
 """PyInstaller spec - BehaviorTree Monitor
 
-将 Python 后端 + Vue 前端 dist 打包为单文件可执行程序。
-使用方法:
-  1. cd frontend && pnpm install && pnpm build   # 生成 dist/
-  2. uv run --group dev pyinstaller bt_monitor.spec  # 打包
+Bundle the Python backend and the built Vue frontend into one executable.
+Usage:
+  1. cd frontend && pnpm install && pnpm build   # writes dist/
+  2. uv run --group dev pyinstaller bt_monitor.spec  # bundle
 """
 
 import os
@@ -17,9 +17,9 @@ a = Analysis(
     pathex=[ROOT],
     binaries=[],
     datas=[
-        # 打包前端构建产物
+        # Bundle the frontend build output
         (os.path.join(ROOT, 'dist'), 'dist'),
-        # 应用资源（图标等）
+        # Application resources (icons etc.)
         (os.path.join(ROOT, 'resources'), 'resources'),
     ],
     hiddenimports=[

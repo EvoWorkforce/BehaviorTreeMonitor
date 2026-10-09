@@ -2,14 +2,14 @@ import { defineStore } from 'pinia'
 import { ref, reactive, computed } from 'vue'
 import type { TreeNode, NodePort, BtNodeType } from '@/types'
 
-// ---- 常量 ----
+// ---- Constants ----
 const MIN_NODE_WIDTH = 50
 const NODE_BASE_HEIGHT = 28
 const PORT_HEIGHT = 18
 const LEVEL_GAP = 40
 const SIBLING_GAP = 8
 
-// ---- 辅助函数 ----
+// ---- Helpers ----
 const CJK_RANGE = /[\u2E80-\u9FFF\uF900-\uFAFF\uFE30-\uFE4F]/
 
 export function measureTextWidth(text: string, charWidth: number): number {
@@ -53,7 +53,7 @@ function calculateNodeWidth(node: TreeNode): number {
 }
 
 function getNodeType(tagName: string, modelTypes: Record<string, string>): BtNodeType {
-  // 优先从 TreeNodesModel 获取类型
+  // Prefer the type from TreeNodesModel
   const modelType = modelTypes[tagName]?.toLowerCase()
   if (modelType === 'condition') return 'condition'
   if (modelType === 'action') return 'action'
@@ -82,7 +82,7 @@ function generateUid(): string {
   return `_gen_${++uidCounter}`
 }
 
-// ---- 布局算法 ----
+// ---- Layout ----
 function collectLevelInfo(node: TreeNode, depth: number, levelHeights: Record<number, number>, levelWidths: Record<number, number>) {
   node.width = calculateNodeWidth(node)
   node.depth = depth
@@ -201,7 +201,7 @@ export const useTreeStore = defineStore('tree', () => {
     return r
   })
 
-  // XML 解析
+  // XML parsing
   type BehaviorTreeEntry = {
     id: string
     fullpath: string
@@ -214,7 +214,7 @@ export const useTreeStore = defineStore('tree', () => {
   function parseTree(xmlString: string) {
     const doc = new DOMParser().parseFromString(xmlString, 'text/xml')
 
-    // 从 TreeNodesModel 提取节点类型映射
+    // Extract the node type map from TreeNodesModel
     currentModelTypes = {}
     doc.querySelectorAll('TreeNodesModel > *').forEach(el => {
       const id = el.getAttribute('ID')
@@ -331,7 +331,7 @@ export const useTreeStore = defineStore('tree', () => {
   function relayout() {
     if (treeData.value) {
       layoutTree(treeData.value, horizontal.value)
-      // 触发响应式更新
+      // Trigger a reactive update
       treeData.value = { ...treeData.value }
     }
   }
@@ -465,11 +465,11 @@ export const useTreeStore = defineStore('tree', () => {
     if (!node.isSubtreeContainer || !node.subtreeId) return
 
     if (node.expanded) {
-      // 收起: 保留状态数据，仅清除子节点
+      // Collapse: keep status data, clear only the child nodes
       node.children = []
       node.expanded = false
     } else {
-      // 展开: 从 behaviorTrees 解析子节点
+      // Expand: parse the child nodes from behaviorTrees
       const subtreePath = node.attributes['_fullpath']
       const btElement = resolveSubtreeBehaviorTree(node.subtreeId, subtreePath)
       if (!btElement) return

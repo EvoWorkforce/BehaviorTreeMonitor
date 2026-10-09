@@ -10,7 +10,7 @@ export function useWebSocket(onMessage: (msg: WsMessage) => void) {
     const socket = new WebSocket(url)
 
     socket.onopen = () => {
-      console.log('WebSocket 已连接')
+      console.log('WebSocket connected')
     }
 
     socket.onmessage = (event: MessageEvent) => {
@@ -19,13 +19,13 @@ export function useWebSocket(onMessage: (msg: WsMessage) => void) {
     }
 
     socket.onclose = () => {
-      console.log('WebSocket 已关闭，3s 后重连')
+      console.log('WebSocket closed, reconnecting in 3 s')
       ws.value = null
       setTimeout(connect, 3000)
     }
 
     socket.onerror = (err) => {
-      console.error('WebSocket 错误:', err)
+      console.error('WebSocket error:', err)
     }
 
     ws.value = socket

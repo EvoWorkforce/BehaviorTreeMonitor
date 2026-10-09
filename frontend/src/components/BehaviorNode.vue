@@ -6,16 +6,16 @@
     @mouseenter="$emit('mouseenter', $event, props.node)"
     @mouseleave="$emit('mouseleave')"
   >
-    <!-- 节点背景 -->
+    <!-- Node background -->
     <rect class="node-box" :width="props.node.width" :height="height" rx="4" />
 
-    <!-- 图标（靠左） -->
+    <!-- Icon (left-aligned) -->
     <text class="node-icon" x="8" y="15">{{ nodeIcon }}</text>
 
-    <!-- 名称（在图标右侧区域居中） -->
+    <!-- Name (centred in the area right of the icon) -->
     <text class="node-title" :x="(22 + props.node.width - (props.node.isSubtreeContainer ? 20 : 0)) / 2" y="15" text-anchor="middle">{{ props.node.name }}</text>
 
-    <!-- 子树展开/收起按钮 -->
+    <!-- Subtree expand/collapse button -->
     <g v-if="props.node.isSubtreeContainer" class="subtree-toggle" @click.stop="$emit('toggle-subtree', props.node)">
       <rect
         class="toggle-btn-bg"
@@ -42,7 +42,7 @@
       />
     </g>
 
-    <!-- 端口列表 -->
+    <!-- Port list -->
     <g class="ports" :transform="`translate(0, ${store.NODE_BASE_HEIGHT})`">
       <g
         v-for="(port, index) in ports"
@@ -142,7 +142,7 @@ const maxValueWidth = computed(() => {
 .is-subtree .node-box {
   stroke-dasharray: 4 2;
 }
-/* 控制节点名称和图标：粉红色 */
+/* Control node name and icon: pink */
 .type-sequence .node-title,
 .type-sequence .node-icon,
 .type-fallback .node-title,
@@ -151,7 +151,7 @@ const maxValueWidth = computed(() => {
 .type-parallel .node-icon {
   fill: #ff79c6;
 }
-/* 装饰器节点名称和图标：蓝绿色 */
+/* Decorator node name and icon: teal */
 .type-decorator .node-title,
 .type-decorator .node-icon {
   fill: #4ecdc4;

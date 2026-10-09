@@ -1,38 +1,38 @@
 # BehaviorTree Monitor
 
-基于 [BehaviorTree.CPP](https://github.com/BehaviorTree/BehaviorTree.CPP) Groot2 协议的行为树实时监控工具，能展示20个以上的节点状态(包括subtree内部节点)。
+A live behavior tree monitor built on the [BehaviorTree.CPP](https://github.com/BehaviorTree/BehaviorTree.CPP) Groot2 protocol. It shows the status of 20 or more nodes, including nodes inside subtrees.
 
-## 项目架构
+## Architecture
 
 ```
 Python (PySide6 + aiohttp)          Vue 3 + TypeScript
 ┌─────────────────────┐           ┌──────────────────┐
-│  Qt WebEngineView   │──HTTP──►  │  前端 (dist/)     │
-│  aiohttp Server     │◄─WS───►   │  WebSocket 客户端 │
+│  Qt WebEngineView   │──HTTP──►  │  Frontend (dist/)  │
+│  aiohttp Server     │◄─WS───►   │  WebSocket client │
 │  ZMQ Bridge         │◄─ZMQ──►   │                  │
 └─────────────────────┘           └──────────────────┘
                                         ▲
                                         │ ZMQ REQ/REP
                                         ▼
-                                  BT.CPP 执行器
+                                  BT.CPP executor
                                   (Groot2Publisher)
 ```
 
-## 项目预览
+## Preview
 
 ![](./sample1.png)
 
 ![](./sample2.png)
 
-## 项目结构
+## Project layout
 
 ```
 BehaviorTreeMonitor/
-├── main.py                 # 入口
+├── main.py                 # entry point
 ├── bt_monitor/
-│   ├── protocol.py         # BT.CPP Groot2 协议
-│   ├── server.py           # aiohttp WebSocket/ZMQ 桥接
-│   └── app.py              # Qt WebEngine 窗口
+│   ├── protocol.py         # BT.CPP Groot2 protocol
+│   ├── server.py           # aiohttp WebSocket/ZMQ bridge
+│   └── app.py              # Qt WebEngine window
 ├── frontend/               # Vue 3 + TypeScript
 │   ├── src/
 │   │   ├── App.vue
@@ -42,56 +42,56 @@ BehaviorTreeMonitor/
 │   │   ├── types/
 │   │   └── styles/
 │   └── ...
-└── bt_monitor.spec         # PyInstaller 配置
+└── bt_monitor.spec         # PyInstaller config
 ```
 
-## 开发
+## Development
 
-### 环境配置
+### Requirements
 
-- [uv](https://docs.astral.sh/uv/) (Python 包管理)
+- [uv](https://docs.astral.sh/uv/) (Python package manager)
 - Node.js 18+ & pnpm
 
-### 安装依赖
+### Install dependencies
 
 ```bash
-# Python 依赖
+# Python dependencies
 uv sync
 
-# 前端依赖
+# Frontend dependencies
 cd frontend && pnpm install
 ```
 
-### 开发运行
+### Run in development
 
-- 构建前端
+- Build the frontend
 
 ```bash
 cd frontend
 pnpm build
 ```
 
-- 启动应用
+- Start the application
 
 ```bash
 uv run python main.py
 ```
 
-### 构建发布
+### Build a release
 
 ```bash
-# 1. 构建前端
+# 1. Build the frontend
 cd frontend && pnpm install && pnpm build
 
-# 2. PyInstaller 打包
+# 2. Bundle with PyInstaller
 uv run --group dev pyinstaller --clean --noconfirm bt_monitor.spec
 ```
 
-输出文件: `dist/BehaviorTreeMonitor`
+Output file: `dist/BehaviorTreeMonitor`
 
-## 下载运行
+## Download and run
 
-如果不想自己构建，可以直接在[release页面](https://github.com/riyuexingchennnn/BehaviorTreeMonitor/releases)下载编译的版本。
+To skip the build, download a compiled version from the [releases page](https://github.com/riyuexingchennnn/BehaviorTreeMonitor/releases).
 
-注意：ubuntu系统要首先chmod赋予执行权限再点击运行。
+Note: on Ubuntu, run `chmod +x` on the file before you start it.
 

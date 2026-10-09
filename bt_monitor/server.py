@@ -1,4 +1,4 @@
-"""WebSocket/ZMQ 桥接服务器"""
+"""WebSocket/ZMQ bridge server"""
 
 import asyncio
 import json
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 class Groot2WebBridge:
-    """ZeroMQ 到 WebSocket 的桥接器"""
+    """Bridge from ZeroMQ to WebSocket"""
 
     def __init__(self):
         self.zmq_host: str = "localhost"
@@ -72,11 +72,11 @@ class Groot2WebBridge:
             _ = reader
             return None
         except TimeoutError:
-            return f"TCP 连接超时: {host}:{port}"
+            return f"TCP connection timed out: {host}:{port}"
         except OSError as e:
-            return f"TCP 不可达 {host}:{port} ({e.strerror or str(e)})"
+            return f"TCP unreachable {host}:{port} ({e.strerror or str(e)})"
         except Exception as e:
-            return f"TCP 检测失败 {host}:{port} ({e})"
+            return f"TCP check failed {host}:{port} ({e})"
 
     async def connect_zmq(self, host: str, port: int) -> bool:
         self.zmq_host, self.zmq_port = self.normalize_host_port(host, port)
@@ -100,19 +100,19 @@ class Groot2WebBridge:
             self.zmq_socket.setsockopt(zmq.SNDTIMEO, 3000)
 
             address = f"tcp://{self.zmq_host}:{self.zmq_port}"
-            logger.info(f"连接到 ZeroMQ: {address}")
+            logger.info(f"Connecting to ZeroMQ: {address}")
             self.zmq_socket.connect(address)
 
             self.tree_xml = await self._request_tree()
             if self.tree_xml:
                 self.connected = True
-                logger.info("成功连接到 BT.CPP 服务器")
+                logger.info("Connected to the BT.CPP server")
                 return True
             self.connected = False
-            self.last_error = f"连接超时或对端未响应: {address}"
+            self.last_error = f"Connection timed out or peer did not respond: {address}"
             return False
         except Exception as e:
-            logger.error(f"连接失败: {e}")
+            logger.error(f"Connection failed: {e}")
             self.connected = False
             self.last_error = str(e)
             return False
@@ -125,7 +125,7 @@ class Groot2WebBridge:
         self.connected = False
         self.tree_xml = None
         self.tree_uuid = None
-        logger.info("已断开 ZeroMQ 连接")
+        logger.info("ZeroMQ disconnected")
 
     async def _send_request(self, request_type: int, payload: bytes = b'') -> Optional[list]:
         async with self._lock:
@@ -139,15 +139,15 @@ class Groot2WebBridge:
                     await self.zmq_socket.send(header)
                 return await self.zmq_socket.recv_multipart()
             except zmq.error.Again:
-                logger.warning("ZeroMQ 请求超时")
+                logger.warning("ZeroMQ request timed out")
                 await self._reconnect()
                 return None
             except Exception as e:
-                logger.error(f"ZeroMQ 请求失败: {e}")
+                logger.error(f"ZeroMQ request failed: {e}")
                 return None
 
     async def _reconnect(self):
-        logger.info("尝试重新连接...")
+        logger.info("Trying to reconnect...")
         self.connected = False
         if self.zmq_socket:
             self.zmq_socket.close()
@@ -207,7 +207,7 @@ class Groot2WebBridge:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"状态轮询错误: {e}")
+                logger.error(f"Status poll error: {e}")
                 await asyncio.sleep(1)
 
     def start_polling(self):
@@ -243,7 +243,7 @@ async def _ws_handler(request: web.Request) -> web.WebSocketResponse:
     bridge = _get_bridge()
     ws = web.WebSocketResponse()
     await ws.prepare(request)
-    logger.info(f"WebSocket 连接: {request.remote}")
+    logger.info(f"WebSocket connected: {request.remote}")
     bridge.websockets.add(ws)
     try:
         await ws.send_json({
@@ -263,7 +263,7 @@ async def _ws_handler(request: web.Request) -> web.WebSocketResponse:
                 logger.error(f'WebSocket error: {ws.exception()}')
     finally:
         bridge.websockets.discard(ws)
-        logger.info(f"WebSocket 关闭: {request.remote}")
+        logger.info(f"WebSocket closed: {request.remote}")
     return ws
 
 
@@ -280,7 +280,7 @@ async def _handle_ws_message(ws: web.WebSocketResponse, data: dict):
             'connected': success,
             'tree_xml': bridge.tree_xml if success else None,
             'tree_uuid': bridge.tree_uuid if success else None,
-            'message': None if success else (bridge.last_error or f"无法连接到 {host}:{port}"),
+            'message': None if success else (bridge.last_error or f"Cannot connect to {host}:{port}"),
         })
         if success:
             bridge.start_polling()
@@ -294,7 +294,7 @@ async def _handle_ws_message(ws: web.WebSocketResponse, data: dict):
             tree_xml = await bridge._request_tree()
             await ws.send_json({'type': 'tree', 'data': tree_xml})
         else:
-            await ws.send_json({'type': 'error', 'message': '未连接到服务器'})
+            await ws.send_json({'type': 'error', 'message': 'Not connected to the server'})
 
     elif msg_type == 'get_status':
         if bridge.connected:
@@ -305,7 +305,7 @@ async def _handle_ws_message(ws: web.WebSocketResponse, data: dict):
                     'data': {str(k): NodeStatus.to_string(v) for k, v in status.items()},
                 })
         else:
-            await ws.send_json({'type': 'error', 'message': '未连接到服务器'})
+            await ws.send_json({'type': 'error', 'message': 'Not connected to the server'})
 
     elif msg_type == 'get_blackboard':
         if bridge.connected:
@@ -316,10 +316,10 @@ async def _handle_ws_message(ws: web.WebSocketResponse, data: dict):
             else:
                 await ws.send_json({'type': 'blackboard', 'data': None})
         else:
-            await ws.send_json({'type': 'error', 'message': '未连接到服务器'})
+            await ws.send_json({'type': 'error', 'message': 'Not connected to the server'})
 
     else:
-        await ws.send_json({'type': 'error', 'message': f'未知消息类型: {msg_type}'})
+        await ws.send_json({'type': 'error', 'message': f'Unknown message type: {msg_type}'})
 
 
 async def _index_handler(request: web.Request) -> web.Response:
@@ -327,13 +327,13 @@ async def _index_handler(request: web.Request) -> web.Response:
     index_path = os.path.join(static_dir, 'index.html')
     if os.path.exists(index_path):
         return web.FileResponse(index_path)
-    return web.Response(text="前端文件未找到", status=404)
+    return web.Response(text="Frontend files not found", status=404)
 
 
 async def _on_startup(app: web.Application):
     global _bridge
     _bridge = Groot2WebBridge()
-    logger.info("Groot2 Monitor 服务器已启动")
+    logger.info("Groot2 Monitor server started")
 
 
 async def _on_cleanup(app: web.Application):
@@ -344,7 +344,7 @@ async def _on_cleanup(app: web.Application):
 
 
 def create_app(static_dir: str) -> web.Application:
-    """创建 aiohttp 应用，static_dir 为前端 dist 目录路径"""
+    """Create the aiohttp app; static_dir is the path of the built frontend directory"""
     app = web.Application()
     app['static_dir'] = static_dir
     app.on_startup.append(_on_startup)
@@ -358,7 +358,7 @@ def create_app(static_dir: str) -> web.Application:
 
     app.router.add_get('/', _index_handler)
 
-    # 其他静态文件（favicon 等）—— 防止路径遍历
+    # Other static files (favicon etc.) - guard against path traversal
     def _static_file(request: web.Request) -> web.Response:
         filename = request.match_info['filename']
         safe_name = os.path.basename(filename)

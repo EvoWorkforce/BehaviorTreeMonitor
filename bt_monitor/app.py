@@ -1,4 +1,4 @@
-"""Qt WebEngine 应用"""
+"""Qt WebEngine application"""
 
 import os
 import sys
@@ -22,18 +22,18 @@ logger = logging.getLogger(__name__)
 
 
 def _get_dist_dir() -> str:
-    """获取前端 dist 目录路径（支持 PyInstaller 打包）"""
+    """Get the path of the built frontend directory (supports PyInstaller)"""
     if getattr(sys, 'frozen', False):
-        # PyInstaller 打包后
+        # After PyInstaller bundling
         base = sys._MEIPASS  # type: ignore[attr-defined]
     else:
-        # 开发模式
+        # Development mode
         base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base, 'dist')
 
 
 def _get_resource_dir() -> str:
-    """获取资源目录路径（支持 PyInstaller 打包）"""
+    """Get the resource directory path (supports PyInstaller)"""
     if getattr(sys, 'frozen', False):
         base = sys._MEIPASS  # type: ignore[attr-defined]
     else:
@@ -42,7 +42,7 @@ def _get_resource_dir() -> str:
 
 
 class _ServerThread(threading.Thread):
-    """在后台线程运行 aiohttp 服务器"""
+    """Run the aiohttp server in a background thread"""
 
     def __init__(self, static_dir: str, host: str, port: int):
         super().__init__(daemon=True)
@@ -66,7 +66,7 @@ class _ServerThread(threading.Thread):
         await self._runner.setup()
         site = web.TCPSite(self._runner, self.host, self.port)
         await site.start()
-        logger.info(f"服务器已启动: http://{self.host}:{self.port}")
+        logger.info(f"Server started: http://{self.host}:{self.port}")
 
     def wait_ready(self, timeout: float = 10.0):
         self._ready.wait(timeout)
@@ -92,7 +92,7 @@ class MonitorWindow(QMainWindow):
             self.setWindowIcon(QIcon(icon_png))
 
         self._view = QWebEngineView()
-        # 禁用磁盘缓存，确保每次加载最新资源
+        # Disable the disk cache so every load gets the latest resources
         profile = self._view.page().profile()
         profile.setHttpCacheType(QWebEngineProfile.HttpCacheType.NoCache)
         self._view.setUrl(QUrl(url))
@@ -100,7 +100,7 @@ class MonitorWindow(QMainWindow):
 
 
 def run(host: str = "127.0.0.1", port: int = 18080):
-    """启动应用：后台 aiohttp 服务 + Qt 窗口"""
+    """Start the application: background aiohttp service + Qt window"""
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
@@ -108,22 +108,22 @@ def run(host: str = "127.0.0.1", port: int = 18080):
 
     dist_dir = _get_dist_dir()
     if not os.path.isdir(dist_dir):
-        logger.error(f"前端 dist 目录不存在: {dist_dir}")
-        logger.error("请先运行: cd frontend && pnpm install && pnpm build")
+        logger.error(f"Frontend directory does not exist: {dist_dir}")
+        logger.error("Run this first: cd frontend && pnpm install && pnpm build")
         sys.exit(1)
 
-    # 启动后台服务器
+    # Start the background server
     server = _ServerThread(dist_dir, host, port)
     server.start()
     server.wait_ready()
 
-    # Qt 应用
+    # Qt application
     qt_app = QApplication(sys.argv)
     qt_app.setApplicationName("BehaviorTree Monitor")
 
-    # 允许 Ctrl+C 退出
+    # Allow Ctrl+C to exit
     signal.signal(signal.SIGINT, signal.SIG_DFL)
-    # 定时器驱动 Python signal 处理
+    # A timer drives Python signal handling
     timer = QTimer()
     timer.timeout.connect(lambda: None)
     timer.start(200)

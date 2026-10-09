@@ -1,7 +1,7 @@
 [project]
 name = "behavior-tree-monitor"
 version = "1.0.0"
-description = "BehaviorTree.CPP Groot2 实时监控工具"
+description = "Live monitor for BehaviorTree.CPP through the Groot2 protocol"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

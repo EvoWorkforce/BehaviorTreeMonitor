@@ -1,6 +1,6 @@
 <template>
   <div class="app">
-    <!-- 顶部工具栏 -->
+    <!-- Top toolbar -->
     <header class="toolbar">
       <div class="toolbar-left">
         <div class="toolbar-title">
@@ -19,7 +19,7 @@
         <span style="color: var(--text-muted)">:</span>
         <input v-model.number="store.port" class="port" type="number" placeholder="1667" :disabled="store.connected" />
         <button class="btn" :class="store.connected ? 'btn-danger' : 'btn-primary'" @click="toggleConnection">
-          {{ store.connecting ? '连接中...' : store.connected ? '断开' : '连接' }}
+          {{ store.connecting ? 'Connecting...' : store.connected ? 'Disconnect' : 'Connect' }}
         </button>
         <div class="status-indicator" :class="connectionStatus">
           <span class="status-dot"></span>
@@ -29,12 +29,12 @@
       </div>
     </header>
 
-    <!-- 主内容区 -->
+    <!-- Main content -->
     <main class="main-content">
       <div ref="containerRef" class="canvas-container">
         <div class="canvas-bg"></div>
 
-        <!-- 状态统计 -->
+        <!-- Status counts -->
         <div v-if="store.connected" class="status-bar">
           <div class="stat-item">
             <span class="stat-dot idle"></span>
@@ -58,7 +58,7 @@
           </div>
         </div>
 
-        <!-- SVG 画布 -->
+        <!-- SVG canvas -->
         <svg
           ref="canvasRef"
           class="tree-canvas"
@@ -69,14 +69,14 @@
           @wheel.prevent="onWheel"
         >
           <g :transform="`translate(${panX}, ${panY}) scale(${zoom})`">
-            <!-- 连接线 -->
+            <!-- Connection lines -->
             <g class="connections">
               <template v-for="conn in connections" :key="conn.id">
                 <path :d="conn.path" class="connection-line-glow" />
                 <path :d="conn.path" class="connection-line" />
               </template>
             </g>
-            <!-- 节点 -->
+            <!-- Nodes -->
             <g class="nodes">
               <BehaviorNode
                 v-for="node in visibleNodes"
@@ -90,20 +90,20 @@
           </g>
         </svg>
 
-        <!-- 缩放控制 -->
+        <!-- Zoom controls -->
         <div class="zoom-controls">
-          <button class="btn" title="放大" @click="zoomIn">+</button>
-          <button class="btn" title="缩小" @click="zoomOut">−</button>
+          <button class="btn" title="Zoom in" @click="zoomIn">+</button>
+          <button class="btn" title="Zoom out" @click="zoomOut">−</button>
           <span class="zoom-value">{{ Math.round(zoom * 100) }}%</span>
-          <button class="btn" title="适应" @click="zoomFit">◎</button>
-          <button class="btn" title="重置" @click="zoomReset">↺</button>
+          <button class="btn" title="Fit" @click="zoomFit">◎</button>
+          <button class="btn" title="Reset" @click="zoomReset">↺</button>
           <span class="zoom-divider"></span>
-          <button class="btn" :title="store.horizontal ? '切换为竖向布局' : '切换为横向布局'" @click="onToggleLayout">
+          <button class="btn" :title="store.horizontal ? 'Switch to vertical layout' : 'Switch to horizontal layout'" @click="onToggleLayout">
             {{ store.horizontal ? '⇄' : '⇵' }}
           </button>
         </div>
 
-        <!-- 空状态 -->
+        <!-- Empty state -->
         <div v-if="!store.connected || !store.treeData" class="empty-state">
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 3L12 8M12 8L6 14M12 8L18 14M6 14L6 21M18 14L18 21" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
@@ -111,11 +111,11 @@
             <circle cx="6" cy="14" r="2" fill="currentColor" />
             <circle cx="18" cy="14" r="2" fill="currentColor" />
           </svg>
-          <h3>{{ store.connected ? '等待行为树数据...' : '未连接到BT服务器' }}</h3>
-          <p>{{ store.connected ? '正在获取树结构' : '请输入服务器地址并点击连接' }}</p>
+          <h3>{{ store.connected ? 'Waiting for behavior tree data...' : 'Not connected to a BT server' }}</h3>
+          <p>{{ store.connected ? 'Fetching the tree structure' : 'Enter the server address and click Connect' }}</p>
         </div>
 
-        <!-- 提示框 -->
+        <!-- Tooltip -->
         <div v-if="tooltip.visible" class="tooltip" :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }">
           <div class="tooltip-title">{{ tooltip.node?.name }}</div>
           <div class="tooltip-type">{{ tooltip.node?.tag }}</div>
@@ -151,7 +151,7 @@ function handleMessage(msg: WsMessage) {
         connectionError.value = ''
       } else if (msg.message) {
         connectionError.value = msg.message
-        console.error('连接失败:', msg.message)
+        console.error('Connection failed:', msg.message)
       }
       if (msg.connected && msg.tree_xml) {
         store.parseTree(msg.tree_xml)
@@ -174,7 +174,7 @@ function handleMessage(msg: WsMessage) {
       store.connecting = false
       break
     case 'error':
-      console.error('服务器错误:', msg.message)
+      console.error('Server error:', msg.message)
       store.connecting = false
       break
   }
@@ -190,7 +190,7 @@ function toggleConnection() {
   }
 }
 
-// ---- 计算属性 ----
+// ---- Computed properties ----
 const connectionStatus = computed(() => {
   if (store.connecting) return 'connecting'
   if (store.connected) return 'connected'
@@ -198,10 +198,10 @@ const connectionStatus = computed(() => {
 })
 
 const statusText = computed(() => {
-  if (store.connecting) return '连接中...'
-  if (store.connected) return '已连接'
-  if (connectionError.value) return '连接失败'
-  return '未连接'
+  if (store.connecting) return 'Connecting...'
+  if (store.connected) return 'Connected'
+  if (connectionError.value) return 'Connection failed'
+  return 'Not connected'
 })
 
 const visibleNodes = computed<TreeNode[]>(() => {
@@ -228,7 +228,7 @@ const connections = computed<Connection[]>(() => {
     node.children?.forEach(child => {
       let sx: number, sy: number, ex: number, ey: number, path: string
       if (isH) {
-        // 水平: 父节点右侧中点 → 子节点左侧中点
+        // Horizontal: parent right midpoint to child left midpoint
         sx = node.x + node.width
         sy = node.y + getNodeHeight(node) / 2
         ex = child.x
@@ -236,7 +236,7 @@ const connections = computed<Connection[]>(() => {
         const mx = (sx + ex) / 2
         path = `M ${sx} ${sy} C ${mx} ${sy}, ${mx} ${ey}, ${ex} ${ey}`
       } else {
-        // 垂直: 父节点底部中点 → 子节点顶部中点
+        // Vertical: parent bottom midpoint to child top midpoint
         sx = node.x + node.width / 2
         sy = node.y + getNodeHeight(node)
         ex = child.x + child.width / 2
@@ -252,7 +252,7 @@ const connections = computed<Connection[]>(() => {
   return conns
 })
 
-// ---- 画布状态 ----
+// ---- Canvas state ----
 const containerRef = ref<HTMLDivElement | null>(null)
 const canvasRef = ref<SVGSVGElement | null>(null)
 const zoom = ref(1)
@@ -331,7 +331,7 @@ function onToggleSubtree(node: TreeNode) {
   nextTick(() => setTimeout(zoomFit, 100))
 }
 
-// ---- 提示框 ----
+// ---- Tooltip ----
 const tooltip = reactive<{ visible: boolean; x: number; y: number; node: TreeNode | null }>({
   visible: false,
   x: 0,
@@ -360,7 +360,7 @@ function hideTooltip() {
   tooltip.visible = false
 }
 
-// ---- 生命周期 ----
+// ---- Lifecycle ----
 onMounted(() => {
   wsConnect()
   setTimeout(() => {

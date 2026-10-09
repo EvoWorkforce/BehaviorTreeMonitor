@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""BehaviorTree Monitor 入口"""
+"""BehaviorTree Monitor entry point"""
 
 from bt_monitor.app import run
 

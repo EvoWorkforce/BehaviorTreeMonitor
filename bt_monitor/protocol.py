@@ -1,4 +1,4 @@
-"""BehaviorTree.CPP Groot2 Monitor 协议定义"""
+"""BehaviorTree.CPP Groot2 Monitor protocol definitions"""
 
 import struct
 import random
@@ -9,7 +9,7 @@ PROTOCOL_ID = 2
 
 
 class RequestType:
-    """对应 BT::Monitor::RequestType"""
+    """Matches BT::Monitor::RequestType"""
     FULLTREE = ord('T')
     STATUS = ord('S')
     BLACKBOARD = ord('B')
@@ -26,7 +26,7 @@ class RequestType:
 
 
 class NodeStatus:
-    """节点状态枚举"""
+    """Node status enum"""
     IDLE = 0
     RUNNING = 1
     SUCCESS = 2
@@ -53,13 +53,13 @@ class NodeStatus:
 
 
 def create_request_header(request_type: int) -> bytes:
-    """创建请求头 (6字节): protocol(1) + type(1) + unique_id(4)"""
+    """Build the request header (6 bytes): protocol(1) + type(1) + unique_id(4)"""
     unique_id = random.randint(0, 0xFFFFFFFF)
     return struct.pack('<BBL', PROTOCOL_ID, request_type, unique_id)
 
 
 def parse_reply_header(data: bytes) -> Optional[Dict[str, Any]]:
-    """解析回复头 (22字节): protocol(1) + type(1) + unique_id(4) + tree_uuid(16)"""
+    """Parse the reply header (22 bytes): protocol(1) + type(1) + unique_id(4) + tree_uuid(16)"""
     if len(data) < 22:
         return None
     protocol, req_type, unique_id = struct.unpack('<BBL', data[:6])
@@ -73,7 +73,7 @@ def parse_reply_header(data: bytes) -> Optional[Dict[str, Any]]:
 
 
 def parse_status_buffer(data: bytes) -> Dict[int, int]:
-    """解析状态缓冲区: 每个节点 uid(2字节LE) + status(1字节)"""
+    """Parse the status buffer: per node uid (2 bytes LE) + status (1 byte)"""
     statuses = {}
     offset = 0
     while offset + 3 <= len(data):
