@@ -225,3 +225,29 @@ html, body {
 .search-count { color: var(--text-muted); font-family: var(--font-mono); }
 .follow-toggle { display: flex; align-items: center; gap: 4px; cursor: pointer; }
 .node-group.is-match .node-box { stroke: var(--connection-color); stroke-width: 3; filter: drop-shadow(0 0 6px var(--connection-glow)); }
+
+/* Timeline drawer */
+.timeline { display: flex; flex-direction: column; font-size: 12px; }
+.tl-header { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-bottom: 1px solid var(--border-color); }
+.tl-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
+.tl-count { color: var(--text-secondary); font-family: var(--font-mono); }
+.tl-note { color: var(--text-muted); margin-left: auto; }
+.tl-body { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+.tl-lanes { flex: 1; overflow: auto; padding: 4px 12px; border-right: 1px solid var(--border-color); }
+.tl-lane { display: flex; align-items: center; gap: 8px; height: 22px; cursor: pointer; }
+.tl-lane:hover { background: var(--bg-tertiary); }
+.tl-lane-name { width: 200px; flex: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); }
+.tl-track { position: relative; flex: 1; height: 10px; background: var(--bg-tertiary); border-radius: 2px; }
+.tl-seg { position: absolute; top: 0; bottom: 0; background: var(--status-idle); }
+.tl-seg.running { background: var(--status-running); }
+.tl-seg.success { background: var(--status-success); }
+.tl-seg.failure { background: var(--status-failure); }
+.tl-log { flex: 1; overflow: auto; display: block; border-collapse: collapse; }
+.tl-log tr { cursor: pointer; }
+.tl-log tr:hover { background: var(--bg-tertiary); }
+.tl-log td { padding: 2px 8px; white-space: nowrap; color: var(--text-secondary); }
+.tl-time { font-family: var(--font-mono); color: var(--text-muted); }
+.tl-chg b { font-weight: 600; color: var(--status-idle); }
+.tl-chg b.running { color: var(--status-running); }
+.tl-chg b.success { color: var(--status-success); }
+.tl-chg b.failure { color: var(--status-failure); }

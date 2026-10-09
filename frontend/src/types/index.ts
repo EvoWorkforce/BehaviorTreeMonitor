@@ -57,6 +57,8 @@ export interface WsMessage {
   tree_uuid?: string | null
   data?: Record<string, string> | string | null
   message?: string
+  active?: boolean
+  start_epoch_us?: number
 }
 
 /** Decoded blackboard: instance name -> key -> JSON value */

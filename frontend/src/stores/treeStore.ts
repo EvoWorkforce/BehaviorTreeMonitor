@@ -9,6 +9,8 @@ import type { ParseContext } from '@/lib/parse'
 import { collectOwnUids } from '@/lib/blackboard'
 import { buildInstanceTree } from '@/lib/instances'
 import type { InstanceNode } from '@/lib/instances'
+import { buildUidPaths } from '@/lib/timeline'
+import type { UidInfo } from '@/lib/timeline'
 
 export { measureTextWidth, getNodePorts, getNodeHeight } from '@/lib/parse'
 
@@ -24,6 +26,8 @@ export const useTreeStore = defineStore('tree', () => {
   const nodeStatuses: Record<string, string> = reactive({})
   const instances = ref<InstanceNode | null>(null)
   const selectedPath = ref('')
+  /** Every `_uid` in the FULLTREE -> readable path and owning block, for the timeline. */
+  const uidInfo = ref<Record<string, UidInfo>>({})
 
   /** Uids parsed directly from the selected block; inline-expanded SubTree children are excluded. */
   const ownUids = computed(() => (treeData.value ? collectOwnUids(treeData.value) : new Set<string>()))
@@ -93,6 +97,7 @@ export const useTreeStore = defineStore('tree', () => {
     parseCtx = createParseContext(currentModelTypes, registerUid)
 
     instances.value = buildInstanceTree(doc)
+    uidInfo.value = buildUidPaths(doc)
     selectedPath.value = ''
     renderBlock(mainTree, mainId ?? 'Root')
   }
@@ -240,7 +245,7 @@ export const useTreeStore = defineStore('tree', () => {
 
   return {
     connected, connecting, host, port, horizontal,
-    treeData, ownUids, nodeStatuses, stats, instances, selectedPath,
+    treeData, ownUids, nodeStatuses, stats, instances, selectedPath, uidInfo,
     parseTree, selectInstance, updateStatus, toggleLayout, toggleSubtree,
     NODE_BASE_HEIGHT,
     PORT_HEIGHT,

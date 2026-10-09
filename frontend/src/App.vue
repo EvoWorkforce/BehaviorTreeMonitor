@@ -79,19 +79,15 @@
           </g>
         </svg>
 
-        <!-- Zoom controls -->
-        <div class="zoom-controls">
-          <button class="btn" title="Zoom in" @click="zoomIn"><IconPlus /></button>
-          <button class="btn" title="Zoom out" @click="zoomOut"><IconMinus /></button>
-          <span class="zoom-value">{{ Math.round(zoom * 100) }}%</span>
-          <button class="btn" title="Fit" @click="zoomFit"><IconFit /></button>
-          <button class="btn" title="Reset" @click="zoomReset"><IconReset /></button>
-          <span class="zoom-divider"></span>
-          <button class="btn" :title="store.horizontal ? 'Switch to vertical layout' : 'Switch to horizontal layout'" @click="onToggleLayout">
-            <IconLayoutH v-if="store.horizontal" />
-            <IconLayoutV v-else />
-          </button>
-        </div>
+        <ZoomControls
+          :zoom="zoom"
+          :horizontal="store.horizontal"
+          @zoom-in="zoomIn"
+          @zoom-out="zoomOut"
+          @fit="zoomFit"
+          @reset="zoomReset"
+          @toggle-layout="onToggleLayout"
+        />
 
         <!-- Empty state -->
         <div v-if="!store.connected || !store.treeData" class="empty-state">
@@ -117,7 +113,7 @@
       </div>
       <BlackboardRail v-if="panels.rightOpen" :style="{ width: panels.rightWidth + 'px' }" />
     </main>
-    <section v-if="panels.bottomOpen" class="bottom-drawer" :style="{ height: panels.bottomHeight + 'px' }" aria-label="Timeline"></section>
+    <Timeline v-if="panels.bottomOpen" :style="{ height: panels.bottomHeight + 'px' }" :send="wsSend" @select-node="onSelectTimelineNode" />
   </div>
 </template>
 
@@ -129,21 +125,20 @@ import InstanceRail from './components/InstanceRail.vue'
 import Breadcrumb from './components/Breadcrumb.vue'
 import SearchBar from './components/SearchBar.vue'
 import BlackboardRail from './components/BlackboardRail.vue'
-import IconPlus from './components/icons/IconPlus.vue'
-import IconMinus from './components/icons/IconMinus.vue'
-import IconFit from './components/icons/IconFit.vue'
-import IconReset from './components/icons/IconReset.vue'
-import IconLayoutH from './components/icons/IconLayoutH.vue'
-import IconLayoutV from './components/icons/IconLayoutV.vue'
+import ZoomControls from './components/ZoomControls.vue'
+import Timeline from './components/Timeline.vue'
 import { useTreeStore, getNodeHeight } from './stores/treeStore'
 import { useWebSocket } from './composables/useWebSocket'
 import { usePanels } from './composables/usePanels'
+import { useTooltip } from './composables/useTooltip'
 import { useBlackboardStore } from './stores/blackboardStore'
+import { useTimelineStore } from './stores/timelineStore'
 import { bbNameForPath, extractPortTypes } from './lib/blackboard'
-import type { BlackboardMap, TreeNode, WsMessage } from './types'
+import type { BlackboardMap, TransitionRecord, TreeNode, WsMessage } from './types'
 
 const store = useTreeStore()
 const bb = useBlackboardStore()
+const timeline = useTimelineStore()
 const connectionError = ref('')
 const { panels } = usePanels()
 
@@ -179,6 +174,12 @@ function handleMessage(msg: WsMessage) {
       break
     case 'blackboard':
       bb.update(msg.data as unknown as BlackboardMap | null)
+      break
+    case 'recording':
+      timeline.setRecording(!!msg.active, Number(msg.start_epoch_us ?? 0))
+      break
+    case 'transitions':
+      timeline.add(msg.data as unknown as TransitionRecord[])
       break
     case 'disconnected':
       store.connected = false
@@ -353,34 +354,30 @@ function onSelectInstance(path: string) {
   }
 }
 
-// ---- Tooltip ----
-const tooltip = reactive<{ visible: boolean; x: number; y: number; node: TreeNode | null }>({
-  visible: false,
-  x: 0,
-  y: 0,
-  node: null,
-})
-
-const TOOLTIP_SKIP = new Set(['_uid', '_children_count', 'ID'])
-const tooltipAttrs = computed(() => {
-  if (!tooltip.node?.attributes) return {} as Record<string, string>
-  const result: Record<string, string> = {}
-  for (const [k, v] of Object.entries(tooltip.node.attributes)) {
-    if (!TOOLTIP_SKIP.has(k) && !k.startsWith('_')) result[k] = v
+// A timeline row selects its node: switch to the node's instance if needed, then pan to it.
+function onSelectTimelineNode(uid: number) {
+  const info = store.uidInfo[String(uid)]
+  const find = () => visibleNodes.value.find(n => n.uid === String(uid))
+  let node = find()
+  if (!node && info && info.block !== store.selectedPath && store.selectInstance(info.block)) {
+    setBlackboardTarget(info.block)
+    nextTick(() => {
+      node = find()
+      if (node) highlightAndPan(node)
+    })
+    return
   }
-  return result
-})
-
-function showTooltip(event: MouseEvent, node: TreeNode) {
-  tooltip.visible = true
-  tooltip.x = event.clientX + 15
-  tooltip.y = event.clientY + 15
-  tooltip.node = node
+  if (node) highlightAndPan(node)
 }
 
-function hideTooltip() {
-  tooltip.visible = false
+function highlightAndPan(node: TreeNode) {
+  follow.value = false
+  matchUids.value = new Set([node.uid])
+  panToNode(node)
 }
+
+// ---- Tooltip ----
+const { tooltip, tooltipAttrs, showTooltip, hideTooltip } = useTooltip()
 
 // ---- Lifecycle ----
 onMounted(() => {
