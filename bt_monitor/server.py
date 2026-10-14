@@ -4,7 +4,7 @@ import asyncio
 import json
 import os
 import logging
-from typing import Any, Optional, Dict
+from typing import Any, Optional, Dict, Sequence
 from urllib.parse import urlparse
 
 import zmq
@@ -460,10 +460,13 @@ async def _on_cleanup(app: web.Application):
         _bridge = None
 
 
-def create_app(static_dir: str) -> web.Application:
+def create_app(static_dir: str, tree_dirs: Sequence[str] = (),
+               edit_dirs: Sequence[str] = ()) -> web.Application:
     """Create the aiohttp app; static_dir is the path of the built frontend directory"""
     app = web.Application()
     app['static_dir'] = static_dir
+    app['tree_dirs'] = tuple(tree_dirs)
+    app['edit_dirs'] = tuple(edit_dirs)
     app.on_startup.append(_on_startup)
     app.on_cleanup.append(_on_cleanup)
 

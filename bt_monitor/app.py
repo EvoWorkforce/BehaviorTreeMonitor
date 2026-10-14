@@ -5,7 +5,7 @@ import sys
 import signal
 import logging
 import threading
-from typing import Optional
+from typing import Optional, Sequence
 
 from aiohttp import web
 import asyncio
@@ -38,11 +38,14 @@ def _get_resource_dir() -> str:
 class _ServerThread(threading.Thread):
     """Run the aiohttp server in a background thread"""
 
-    def __init__(self, static_dir: str, host: str, port: int):
+    def __init__(self, static_dir: str, host: str, port: int,
+                 tree_dirs: Sequence[str] = (), edit_dirs: Sequence[str] = ()):
         super().__init__(daemon=True)
         self.static_dir = static_dir
         self.host = host
         self.port = port
+        self.tree_dirs = tuple(tree_dirs)
+        self.edit_dirs = tuple(edit_dirs)
         self.loop: Optional[asyncio.AbstractEventLoop] = None
         self._runner: Optional[web.AppRunner] = None
         self._ready = threading.Event()
@@ -55,7 +58,7 @@ class _ServerThread(threading.Thread):
         self.loop.run_forever()
 
     async def _start(self):
-        app = create_app(self.static_dir)
+        app = create_app(self.static_dir, self.tree_dirs, self.edit_dirs)
         self._runner = web.AppRunner(app)
         await self._runner.setup()
         site = web.TCPSite(self._runner, self.host, self.port)
@@ -85,14 +88,15 @@ def _setup_logging() -> None:
     )
 
 
-def serve(bind: str, port: int, static_dir: Optional[str] = None) -> None:
+def serve(bind: str, port: int, static_dir: Optional[str] = None,
+          tree_dirs: Sequence[str] = (), edit_dirs: Sequence[str] = ()) -> None:
     """Serve the page and the WebSocket bridge until interrupted. Needs no Qt."""
     _setup_logging()
     static_dir = static_dir or _get_dist_dir()
     _check_static(static_dir)
 
     async def _main() -> None:
-        runner = web.AppRunner(create_app(static_dir))
+        runner = web.AppRunner(create_app(static_dir, tree_dirs, edit_dirs))
         await runner.setup()
         await web.TCPSite(runner, bind, port).start()
         try:
@@ -106,7 +110,8 @@ def serve(bind: str, port: int, static_dir: Optional[str] = None) -> None:
         pass
 
 
-def run_window(bind: str, port: int, static_dir: Optional[str] = None) -> None:
+def run_window(bind: str, port: int, static_dir: Optional[str] = None,
+               tree_dirs: Sequence[str] = (), edit_dirs: Sequence[str] = ()) -> None:
     """Start the page server in a thread and show it in a Qt window."""
     try:
         from PySide6.QtWidgets import QApplication, QMainWindow
@@ -144,7 +149,7 @@ def run_window(bind: str, port: int, static_dir: Optional[str] = None) -> None:
             self._view.setUrl(QUrl(url))
             self.setCentralWidget(self._view)
 
-    server = _ServerThread(static_dir, bind, port)
+    server = _ServerThread(static_dir, bind, port, tree_dirs, edit_dirs)
     server.start()
     server.wait_ready()
 
