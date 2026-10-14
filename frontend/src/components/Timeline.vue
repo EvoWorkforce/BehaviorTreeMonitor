@@ -13,7 +13,8 @@
       </span>
       <PanelClose side="bottom" label="timeline" />
     </div>
-    <div v-if="!tl.records.length" class="rail-empty">
+    <div v-if="view.activeView === 'file'" class="rail-empty">Offline: no live data</div>
+    <div v-else-if="!tl.records.length" class="rail-empty">
       {{ tl.recording ? 'Recording. No transitions yet.' : 'Press Record to capture node status changes.' }}
     </div>
     <div v-else class="tl-body">
@@ -48,6 +49,7 @@
 import PanelClose from './PanelClose.vue'
 import { computed } from 'vue'
 import { useTreeStore } from '../stores/treeStore'
+import { useViewStore } from '../stores/viewStore'
 import { useConnectionStore } from '../stores/connectionStore'
 import { useTimelineStore } from '../stores/timelineStore'
 import { toLanes, exportJson } from '../lib/timeline'
@@ -57,6 +59,7 @@ const emit = defineEmits<{ (e: 'select-node', uid: number): void }>()
 
 const store = useTreeStore()
 const conn = useConnectionStore()
+const view = useViewStore()
 const tl = useTimelineStore()
 
 const MAX_LOG_ROWS = 500

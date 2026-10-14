@@ -267,3 +267,22 @@ html, body {
 .panel-close { margin-left: auto; background: none; border: none; color: var(--text-muted); font-size: 16px; line-height: 1; cursor: pointer; padding: 0 4px; }
 .panel-close:hover { color: var(--text-primary); }
 .tl-header .panel-close { margin-left: 4px; }
+
+/* Offline file view: Open menu, source badge, view switch, notice */
+.open-menu { position: relative; }
+.open-menu-list {
+  position: absolute; top: 100%; left: 0; z-index: 20; min-width: 260px; max-height: 60vh; overflow-y: auto;
+  margin-top: 4px; padding: 4px 0; background: var(--bg-secondary); border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+.open-menu-folder { padding: 6px 12px 2px; font-size: 11px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.open-menu-item { display: block; width: 100%; padding: 6px 12px; text-align: left; background: none; border: none; color: var(--text-primary); font-size: 13px; cursor: pointer; }
+.open-menu-item:hover { background: var(--bg-tertiary); }
+.open-menu-tag { color: var(--text-muted); }
+.open-menu-empty { padding: 6px 12px; font-size: 12px; color: var(--text-muted); }
+.open-menu-local { border-top: 1px solid var(--border-color); margin-top: 4px; }
+.source-badge { padding: 2px 8px; font-size: 12px; border: 1px solid var(--border-color); border-radius: 10px; color: var(--text-secondary); white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+.source-badge.file { color: var(--connection-color); border-color: var(--connection-color); }
+.view-switch { display: flex; }
+.view-switch .btn[aria-pressed="true"] { color: var(--connection-color); border-color: var(--connection-color); }
+.file-notice { padding: 4px 10px; font-size: 12px; color: var(--text-secondary); background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 6px; }

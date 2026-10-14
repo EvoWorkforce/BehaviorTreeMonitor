@@ -5,6 +5,19 @@
         <img src="/favicon.svg" alt="Evo" class="toolbar-logo" />
         <span>Evo Behavior Tree Monitor</span>
       </div>
+      <OpenMenu @opened="emit('opened')" />
+      <SourceBadge />
+      <div v-if="canSwitch" class="view-switch" role="group" aria-label="View">
+        <button class="btn" :aria-pressed="view.activeView === 'live'" @click="view.activeView = 'live'">Live</button>
+        <button class="btn" :aria-pressed="view.activeView === 'file'" @click="view.activeView = 'file'">File</button>
+      </div>
+      <button
+        v-if="view.activeView === 'file'"
+        class="btn"
+        :disabled="!canReload"
+        :title="canReload ? 'Read the file again' : 'A file from this computer cannot be reloaded; open it again'"
+        @click="onReload"
+      >Reload</button>
     </div>
 
     <div class="panel-toggles" role="group" aria-label="Panels">
@@ -49,13 +62,30 @@ import IconPanelBottom from './icons/IconPanelBottom.vue'
 import IconPanelRight from './icons/IconPanelRight.vue'
 import IconSun from './icons/IconSun.vue'
 import IconMoon from './icons/IconMoon.vue'
+import OpenMenu from './OpenMenu.vue'
+import SourceBadge from './SourceBadge.vue'
+import { useViewStore } from '../stores/viewStore'
+import { useFileSourceStore } from '../stores/fileSource'
+import { useTreeStore, useFileTreeStore } from '../stores/treeStore'
 
 const props = defineProps<{
   connectionError: string
   send: (msg: Record<string, unknown>) => void
 }>()
 
+const emit = defineEmits<{ (e: 'opened'): void }>()
+
 const store = useConnectionStore()
+const view = useViewStore()
+const src = useFileSourceStore()
+const liveTree = useTreeStore()
+const fileTree = useFileTreeStore()
+const canSwitch = computed(() => !!liveTree.treeData && !!fileTree.treeData)
+const canReload = computed(() => !!src.current && !src.current.local)
+
+async function onReload() {
+  if (await src.reload()) emit('opened')
+}
 const { theme, toggle: toggleTheme } = useTheme()
 const { panels, toggle } = usePanels()
 

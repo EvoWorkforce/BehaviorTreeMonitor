@@ -2,7 +2,8 @@
   <aside class="right-rail blackboard-rail" aria-label="Blackboard">
     <div class="rail-title">Blackboard <span class="bb-target">{{ bb.target }}</span> <PanelClose side="right" label="blackboard" /></div>
     <input v-model="bb.filter" class="bb-filter" type="search" placeholder="Filter keys" aria-label="Filter keys" />
-    <ul v-if="bb.rows.length" class="bb-list">
+    <div v-if="view.activeView === 'file'" class="rail-empty">Offline: no live data</div>
+    <ul v-else-if="bb.rows.length" class="bb-list">
       <li v-for="row in bb.rows" :key="row.key" class="bb-row" :class="{ flash: bb.flashing.has(row.key) }">
         <div class="bb-head">
           <button
@@ -27,5 +28,8 @@ import BlackboardValue from './BlackboardValue.vue'
 import { useBlackboardStore } from '@/stores/blackboardStore'
 import { describeNull } from '@/lib/blackboard'
 
+import { useViewStore } from '@/stores/viewStore'
+
 const bb = useBlackboardStore()
+const view = useViewStore()
 </script>

@@ -1,6 +1,6 @@
 <template>
   <div class="app">
-    <Toolbar :connection-error="connectionError" :send="wsSend" />
+    <Toolbar :connection-error="connectionError" :send="wsSend" @opened="onFileOpened" />
 
     <!-- Main content -->
     <main class="main-content">
@@ -20,7 +20,8 @@
             :root-label="store.instances.treeId"
             @select="onSelectInstance"
           />
-          <StatusCounts v-if="conn.connected" :stats="store.stats" />
+          <StatusCounts v-if="view.activeView === 'live' && conn.connected" :stats="store.stats" />
+          <div v-if="view.activeView === 'file' && fileSource.notice" class="file-notice" role="status">{{ fileSource.notice }}</div>
           <SearchBar v-model:follow="follow" :root="store.treeData" :statuses="store.nodeStatuses" @update:match-uids="matchUids = $event" @pan-to="panToNode" />
         </div>
         <div class="canvas-bg"></div>
@@ -70,15 +71,15 @@
         />
 
         <!-- Empty state -->
-        <div v-if="!conn.connected || !store.treeData" class="empty-state">
+        <div v-if="emptyText.title" class="empty-state">
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 3L12 8M12 8L6 14M12 8L18 14M6 14L6 21M18 14L18 21" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
             <circle cx="12" cy="3" r="2" fill="currentColor" />
             <circle cx="6" cy="14" r="2" fill="currentColor" />
             <circle cx="18" cy="14" r="2" fill="currentColor" />
           </svg>
-          <h3>{{ conn.connected ? 'Waiting for behavior tree data...' : 'Not connected to a BT server' }}</h3>
-          <p>{{ conn.connected ? 'Fetching the tree structure' : 'Enter the server address and click Connect' }}</p>
+          <h3>{{ emptyText.title }}</h3>
+          <p>{{ emptyText.body }}</p>
         </div>
 
         <!-- Tooltip -->
@@ -113,6 +114,8 @@ import { useViewStore, useActiveTree } from './stores/viewStore'
 import { useWebSocket } from './composables/useWebSocket'
 import { usePanels, usePanelShortcuts } from './composables/usePanels'
 import { useTooltip } from './composables/useTooltip'
+import { useFileSourceStore } from './stores/fileSource'
+import { canvasEmptyText } from './lib/treeFiles'
 import { useConnectionStore } from './stores/connectionStore'
 import { useBlackboardStore } from './stores/blackboardStore'
 import { useTimelineStore } from './stores/timelineStore'
@@ -124,6 +127,14 @@ const live = useTreeStore()
 const view = useViewStore()
 const store = computed(() => useActiveTree())
 const conn = useConnectionStore()
+const fileSource = useFileSourceStore()
+const emptyText = computed(() =>
+  view.activeView === 'file' && !store.value.treeData
+    ? canvasEmptyText('file', conn.connected, false)
+    : view.activeView === 'live' && (!conn.connected || !store.value.treeData)
+      ? canvasEmptyText('live', conn.connected, !!store.value.treeData)
+      : { title: '', body: '' },
+)
 const bb = useBlackboardStore()
 const timeline = useTimelineStore()
 const connectionError = ref('')
@@ -371,6 +382,10 @@ function highlightAndPan(node: TreeNode) {
   follow.value = false
   matchUids.value = new Set([node.uid])
   panToNode(node)
+}
+
+function onFileOpened() {
+  nextTick(() => setTimeout(zoomFit, 100))
 }
 
 // ---- Tooltip ----
