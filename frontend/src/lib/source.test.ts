@@ -1,9 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'fs'
-import { resolve } from 'path'
 import { blankComments, loadSourceTree } from './source'
-
-const fixture = readFileSync(resolve(__dirname, '__fixtures__/main_bt.source.xml'), 'utf8')
+import fixture from './__fixtures__/main_bt.source.xml?raw'
 
 describe('happy-dom characterisation', () => {
   it('characterises happy-dom on malformed XML', () => {
