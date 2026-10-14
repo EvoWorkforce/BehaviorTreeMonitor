@@ -109,6 +109,7 @@ import BlackboardRail from './components/BlackboardRail.vue'
 import ZoomControls from './components/ZoomControls.vue'
 import Timeline from './components/Timeline.vue'
 import { useTreeStore, getNodeHeight } from './stores/treeStore'
+import { useViewStore, useActiveTree } from './stores/viewStore'
 import { useWebSocket } from './composables/useWebSocket'
 import { usePanels, usePanelShortcuts } from './composables/usePanels'
 import { useTooltip } from './composables/useTooltip'
@@ -118,7 +119,10 @@ import { useTimelineStore } from './stores/timelineStore'
 import { bbNameForPath, extractPortTypes } from './lib/blackboard'
 import type { BlackboardMap, TransitionRecord, TreeNode, WsMessage } from './types'
 
-const store = useTreeStore()
+// `live` takes WebSocket data; `store` is whichever view the canvas shows.
+const live = useTreeStore()
+const view = useViewStore()
+const store = computed(() => useActiveTree())
 const conn = useConnectionStore()
 const bb = useBlackboardStore()
 const timeline = useTimelineStore()
@@ -153,7 +157,7 @@ function handleMessage(msg: WsMessage) {
       break
     case 'status':
       if (msg.data && typeof msg.data === 'object') {
-        store.updateStatus(msg.data as Record<string, string>)
+        live.updateStatus(msg.data as Record<string, string>)
       }
       break
     case 'blackboard':
@@ -178,13 +182,13 @@ function handleMessage(msg: WsMessage) {
 
 // Parses a tree, then points the blackboard poll at the root instance.
 function loadTree(xml: string) {
-  store.parseTree(xml)
+  live.parseTree(xml)
   bb.setPortTypes(extractPortTypes(new DOMParser().parseFromString(xml, 'text/xml')))
   setBlackboardTarget('')
 }
 
 function setBlackboardTarget(path: string) {
-  const name = bbNameForPath(store.instances, path)
+  const name = bbNameForPath(live.instances, path)
   if (!name) return
   bb.setTarget(name)
   wsSend({ type: 'set_blackboard_target', names: name })
@@ -192,13 +196,13 @@ function setBlackboardTarget(path: string) {
 
 // ---- Computed properties ----
 const visibleNodes = computed<TreeNode[]>(() => {
-  if (!store.treeData) return []
+  if (!store.value.treeData) return []
   const nodes: TreeNode[] = []
   const traverse = (n: TreeNode) => {
     nodes.push(n)
     n.children?.forEach(traverse)
   }
-  traverse(store.treeData)
+  traverse(store.value.treeData)
   return nodes
 })
 
@@ -208,9 +212,9 @@ interface Connection {
 }
 
 const connections = computed<Connection[]>(() => {
-  if (!store.treeData) return []
+  if (!store.value.treeData) return []
   const conns: Connection[] = []
-  const isH = store.horizontal
+  const isH = store.value.horizontal
   const traverse = (node: TreeNode) => {
     node.children?.forEach(child => {
       let sx: number, sy: number, ex: number, ey: number, path: string
@@ -235,7 +239,7 @@ const connections = computed<Connection[]>(() => {
       traverse(child)
     })
   }
-  traverse(store.treeData)
+  traverse(store.value.treeData)
   return conns
 })
 
@@ -309,7 +313,7 @@ function zoomReset() {
   panY.value = 0
 }
 function zoomFit() {
-  const tree = store.treeData
+  const tree = store.value.treeData
   if (!tree || !containerRef.value) return
   const rect = containerRef.value.getBoundingClientRect()
   const padding = 100
@@ -326,12 +330,12 @@ function zoomFit() {
 }
 
 function onToggleLayout() {
-  store.toggleLayout()
+  store.value.toggleLayout()
   nextTick(() => setTimeout(zoomFit, 50))
 }
 
 function onToggleSubtree(node: TreeNode) {
-  store.toggleSubtree(node)
+  store.value.toggleSubtree(node)
   nextTick(() => setTimeout(zoomFit, 100))
 }
 
@@ -341,18 +345,18 @@ function onOpenSubtree(path: string) {
 }
 
 function onSelectInstance(path: string) {
-  if (store.selectInstance(path)) {
-    setBlackboardTarget(path)
+  if (store.value.selectInstance(path)) {
+    if (view.activeView === 'live') setBlackboardTarget(path)
     nextTick(() => setTimeout(zoomFit, 50))
   }
 }
 
 // A timeline row selects its node: switch to the node's instance if needed, then pan to it.
 function onSelectTimelineNode(uid: number) {
-  const info = store.uidInfo[String(uid)]
+  const info = live.uidInfo[String(uid)]
   const find = () => visibleNodes.value.find(n => n.uid === String(uid))
   let node = find()
-  if (!node && info && info.block !== store.selectedPath && store.selectInstance(info.block)) {
+  if (!node && info && info.block !== store.value.selectedPath && store.value.selectInstance(info.block)) {
     setBlackboardTarget(info.block)
     nextTick(() => {
       node = find()

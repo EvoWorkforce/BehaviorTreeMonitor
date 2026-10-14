@@ -15,7 +15,9 @@ import type { UidInfo } from '@/lib/timeline'
 export { measureTextWidth, getNodePorts, getNodeHeight } from '@/lib/parse'
 
 // ---- Store ----
-export const useTreeStore = defineStore('tree', () => {
+/** One tree view's state; `tree` is the live view, `file` the offline file view. */
+export function defineTreeView(id: string) {
+  return defineStore(id, () => {
   const horizontal = ref(true)
 
   const treeData = ref<TreeNode | null>(null)
@@ -247,3 +249,7 @@ export const useTreeStore = defineStore('tree', () => {
     PORT_HEIGHT,
   }
 })
+}
+
+export const useTreeStore = defineTreeView('tree')
+export const useFileTreeStore = defineTreeView('file')

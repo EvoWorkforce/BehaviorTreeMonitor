@@ -100,7 +100,8 @@ import { useBlackboardStore } from '@/stores/blackboardStore'
 import { subtreeOpenPath } from '@/lib/instances'
 import { describeNull, resolvePortValue } from '@/lib/blackboard'
 import { summarize } from '@/lib/format'
-import { useTreeStore, getNodePorts, getNodeHeight, measureTextWidth } from '@/stores/treeStore'
+import { useActiveTree } from '@/stores/viewStore'
+import { getNodePorts, getNodeHeight, measureTextWidth } from '@/stores/treeStore'
 
 const props = defineProps<{ node: TreeNode; highlighted?: boolean }>()
 defineEmits<{
@@ -110,14 +111,14 @@ defineEmits<{
   'open-subtree': [path: string]
 }>()
 
-const store = useTreeStore()
+const store = computed(() => useActiveTree())
 // A SubTree node's name opens its instance alone, like the instance rail.
-const openPath = computed(() => subtreeOpenPath(props.node, store.instances))
+const openPath = computed(() => subtreeOpenPath(props.node, store.value.instances))
 const bb = useBlackboardStore()
 
 /** The blackboard value behind a `{key}` port, or null when the port is a literal or unknown. */
 function live(port: NodePort): { text: string; isNull: boolean; hint?: string } | null {
-  if (!store.ownUids.has(props.node.uid)) return null
+  if (!store.value.ownUids.has(props.node.uid)) return null
   const v = resolvePortValue(port.value, bb.current)
   if (v === undefined) return null
   if (v === null) {
@@ -130,7 +131,7 @@ function live(port: NodePort): { text: string; isNull: boolean; hint?: string } 
 const height = computed(() => getNodeHeight(props.node))
 const ports = computed<NodePort[]>(() => getNodePorts(props.node))
 
-const status = computed(() => store.nodeStatuses[props.node.uid] ?? 'IDLE')
+const status = computed(() => store.value.nodeStatuses[props.node.uid] ?? 'IDLE')
 
 const statusClass = computed(() => {
   const s = status.value.toLowerCase()
