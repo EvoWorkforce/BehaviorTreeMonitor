@@ -12,6 +12,7 @@ import zmq.asyncio
 from aiohttp import web
 import aiohttp
 
+from . import files
 from .protocol import (
     RequestType, NodeStatus,
     Groot2Error, assert_read_only, check_reply, create_request_header,
@@ -447,6 +448,49 @@ async def _index_handler(request: web.Request) -> web.Response:
     return web.Response(text="Frontend files not found", status=404)
 
 
+async def _trees_list(request: web.Request) -> web.Response:
+    found = files.list_tree_files(request.app['tree_dirs'], request.app['edit_dirs'])
+    return web.json_response([
+        {'id': f.id, 'path': f.path, 'folder': f.folder, 'editable': f.editable}
+        for f in found
+    ])
+
+
+def _resolve(request: web.Request) -> files.TreeFile:
+    found = files.resolve_tree_path(
+        request.app['tree_dirs'], request.app['edit_dirs'], request.match_info['id'])
+    if found is None:
+        raise web.HTTPNotFound()
+    return found
+
+
+async def _trees_read(request: web.Request) -> web.Response:
+    found = _resolve(request)
+    try:
+        text, sha = files.read_tree(found.path)
+    except (OSError, UnicodeDecodeError):
+        raise web.HTTPNotFound()
+    return web.json_response({'text': text, 'sha256': sha})
+
+
+async def _trees_write(request: web.Request) -> web.Response:
+    found = _resolve(request)
+    if not found.editable:
+        return web.json_response({'error': 'not editable'}, status=403)
+    try:
+        body = await request.json()
+        text, base = body['text'], body['base_sha256']
+        if not isinstance(text, str) or not isinstance(base, str):
+            raise ValueError
+    except (ValueError, KeyError, TypeError):
+        return web.json_response({'error': 'bad request'}, status=400)
+    try:
+        sha = files.write_tree(found.path, text, base)
+    except files.Conflict as c:
+        return web.json_response({'sha256': c.current_sha}, status=409)
+    return web.json_response({'sha256': sha})
+
+
 async def _on_startup(app: web.Application):
     global _bridge
     _bridge = Groot2WebBridge()
@@ -475,6 +519,10 @@ def create_app(static_dir: str, tree_dirs: Sequence[str] = (),
     assets_dir = os.path.join(static_dir, 'assets')
     if os.path.isdir(assets_dir):
         app.router.add_static('/assets', assets_dir, name='assets')
+
+    app.router.add_get('/api/trees', _trees_list)
+    app.router.add_get('/api/trees/{id}', _trees_read)
+    app.router.add_put('/api/trees/{id}', _trees_write)
 
     app.router.add_get('/', _index_handler)
 
