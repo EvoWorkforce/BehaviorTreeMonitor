@@ -84,6 +84,7 @@ const canSwitch = computed(() => !!liveTree.treeData && !!fileTree.treeData)
 const canReload = computed(() => !!src.current && !src.current.local)
 
 async function onReload() {
+  if (src.dirty && !window.confirm('Discard the unsaved edits and reload the file?')) return
   if (await src.reload()) emit('opened')
 }
 const { theme, toggle: toggleTheme } = useTheme()

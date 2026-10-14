@@ -55,6 +55,7 @@
                 @mouseleave="hideTooltip"
                 @toggle-subtree="onToggleSubtree"
                 @open-subtree="onOpenSubtree"
+                @edit-node="onEditNode"
               />
             </g>
           </g>
@@ -81,6 +82,8 @@
           <h3>{{ emptyText.title }}</h3>
           <p>{{ emptyText.body }}</p>
         </div>
+
+        <EditPopover v-if="fileSource.editTarget && view.activeView === 'file'" :key="fileSource.editTarget.node.uid" />
 
         <!-- Tooltip -->
         <div v-if="tooltip.visible" class="tooltip" :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }">
@@ -109,6 +112,7 @@ import SearchBar from './components/SearchBar.vue'
 import BlackboardRail from './components/BlackboardRail.vue'
 import ZoomControls from './components/ZoomControls.vue'
 import Timeline from './components/Timeline.vue'
+import EditPopover from './components/EditPopover.vue'
 import { useTreeStore, getNodeHeight } from './stores/treeStore'
 import { useViewStore, useActiveTree } from './stores/viewStore'
 import { useWebSocket } from './composables/useWebSocket'
@@ -382,6 +386,15 @@ function highlightAndPan(node: TreeNode) {
   follow.value = false
   matchUids.value = new Set([node.uid])
   panToNode(node)
+}
+
+// A double-click on a node opens its edit popover; one popover at a time, and a drag is not a click.
+function onEditNode(event: MouseEvent, node: TreeNode) {
+  if (dragDistance > 3) return
+  if (fileSource.dirty && !window.confirm('Discard the unsaved edits?')) return
+  const r = (event.currentTarget as Element).getBoundingClientRect()
+  fileSource.dirty = false
+  fileSource.editTarget = { node, rect: { left: r.left, top: r.top, bottom: r.bottom } }
 }
 
 function onFileOpened() {

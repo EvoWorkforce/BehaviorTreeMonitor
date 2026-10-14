@@ -5,6 +5,7 @@
     :transform="`translate(${props.node.x}, ${props.node.y})`"
     @mouseenter="$emit('mouseenter', $event, props.node)"
     @mouseleave="$emit('mouseleave')"
+    @dblclick="onDblClick"
   >
     <!-- Node background -->
     <rect class="node-box" :width="props.node.width" :height="height" rx="4" />
@@ -100,16 +101,22 @@ import { useBlackboardStore } from '@/stores/blackboardStore'
 import { subtreeOpenPath } from '@/lib/instances'
 import { describeNull, resolvePortValue } from '@/lib/blackboard'
 import { summarize } from '@/lib/format'
-import { useActiveTree } from '@/stores/viewStore'
+import { useActiveTree, useViewStore } from '@/stores/viewStore'
 import { getNodePorts, getNodeHeight, measureTextWidth } from '@/stores/treeStore'
 
 const props = defineProps<{ node: TreeNode; highlighted?: boolean }>()
-defineEmits<{
+const emit = defineEmits<{
   mouseenter: [event: MouseEvent, node: TreeNode]
   mouseleave: []
   'toggle-subtree': [node: TreeNode]
   'open-subtree': [path: string]
+  'edit-node': [event: MouseEvent, node: TreeNode]
 }>()
+
+// Only the file view edits; the live view has no edit path.
+function onDblClick(event: MouseEvent) {
+  if (useViewStore().activeView === 'file') emit('edit-node', event, props.node)
+}
 
 const store = computed(() => useActiveTree())
 // A SubTree node's name opens its instance alone, like the instance rail.
