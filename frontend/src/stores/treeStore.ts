@@ -59,8 +59,8 @@ export const useTreeStore = defineStore('tree', () => {
     if (!(uid in nodeStatuses)) nodeStatuses[uid] = 'IDLE'
   }
 
-  function parseTree(xmlString: string) {
-    const doc = new DOMParser().parseFromString(xmlString, 'text/xml')
+  function parseTree(source: string | Document) {
+    const doc = typeof source === 'string' ? new DOMParser().parseFromString(source, 'text/xml') : source
 
     // Extract the node type map from TreeNodesModel
     currentModelTypes = {}
