@@ -41,7 +41,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useTreeStore } from '../stores/treeStore'
+import { useConnectionStore } from '../stores/connectionStore'
 import { useTheme } from '../composables/useTheme'
 import { usePanels } from '../composables/usePanels'
 import IconPanelLeft from './icons/IconPanelLeft.vue'
@@ -55,7 +55,7 @@ const props = defineProps<{
   send: (msg: Record<string, unknown>) => void
 }>()
 
-const store = useTreeStore()
+const store = useConnectionStore()
 const { theme, toggle: toggleTheme } = useTheme()
 const { panels, toggle } = usePanels()
 

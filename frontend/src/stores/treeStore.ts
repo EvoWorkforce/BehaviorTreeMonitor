@@ -16,10 +16,6 @@ export { measureTextWidth, getNodePorts, getNodeHeight } from '@/lib/parse'
 
 // ---- Store ----
 export const useTreeStore = defineStore('tree', () => {
-  const connected = ref(false)
-  const connecting = ref(false)
-  const host = ref('localhost')
-  const port = ref(1667)
   const horizontal = ref(true)
 
   const treeData = ref<TreeNode | null>(null)
@@ -244,7 +240,7 @@ export const useTreeStore = defineStore('tree', () => {
   }
 
   return {
-    connected, connecting, host, port, horizontal,
+    horizontal,
     treeData, ownUids, nodeStatuses, stats, instances, selectedPath, uidInfo,
     parseTree, selectInstance, updateStatus, toggleLayout, toggleSubtree,
     NODE_BASE_HEIGHT,

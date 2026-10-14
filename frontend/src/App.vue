@@ -20,7 +20,7 @@
             :root-label="store.instances.treeId"
             @select="onSelectInstance"
           />
-          <StatusCounts v-if="store.connected" :stats="store.stats" />
+          <StatusCounts v-if="conn.connected" :stats="store.stats" />
           <SearchBar v-model:follow="follow" :root="store.treeData" :statuses="store.nodeStatuses" @update:match-uids="matchUids = $event" @pan-to="panToNode" />
         </div>
         <div class="canvas-bg"></div>
@@ -70,15 +70,15 @@
         />
 
         <!-- Empty state -->
-        <div v-if="!store.connected || !store.treeData" class="empty-state">
+        <div v-if="!conn.connected || !store.treeData" class="empty-state">
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 3L12 8M12 8L6 14M12 8L18 14M6 14L6 21M18 14L18 21" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
             <circle cx="12" cy="3" r="2" fill="currentColor" />
             <circle cx="6" cy="14" r="2" fill="currentColor" />
             <circle cx="18" cy="14" r="2" fill="currentColor" />
           </svg>
-          <h3>{{ store.connected ? 'Waiting for behavior tree data...' : 'Not connected to a BT server' }}</h3>
-          <p>{{ store.connected ? 'Fetching the tree structure' : 'Enter the server address and click Connect' }}</p>
+          <h3>{{ conn.connected ? 'Waiting for behavior tree data...' : 'Not connected to a BT server' }}</h3>
+          <p>{{ conn.connected ? 'Fetching the tree structure' : 'Enter the server address and click Connect' }}</p>
         </div>
 
         <!-- Tooltip -->
@@ -112,12 +112,14 @@ import { useTreeStore, getNodeHeight } from './stores/treeStore'
 import { useWebSocket } from './composables/useWebSocket'
 import { usePanels, usePanelShortcuts } from './composables/usePanels'
 import { useTooltip } from './composables/useTooltip'
+import { useConnectionStore } from './stores/connectionStore'
 import { useBlackboardStore } from './stores/blackboardStore'
 import { useTimelineStore } from './stores/timelineStore'
 import { bbNameForPath, extractPortTypes } from './lib/blackboard'
 import type { BlackboardMap, TransitionRecord, TreeNode, WsMessage } from './types'
 
 const store = useTreeStore()
+const conn = useConnectionStore()
 const bb = useBlackboardStore()
 const timeline = useTimelineStore()
 const connectionError = ref('')
@@ -130,8 +132,8 @@ const { connect: wsConnect, send: wsSend, close: wsClose } = useWebSocket(handle
 function handleMessage(msg: WsMessage) {
   switch (msg.type) {
     case 'connection_status':
-      store.connected = !!msg.connected
-      store.connecting = false
+      conn.connected = !!msg.connected
+      conn.connecting = false
       if (msg.connected) {
         connectionError.value = ''
       } else if (msg.message) {
@@ -164,12 +166,12 @@ function handleMessage(msg: WsMessage) {
       timeline.add(msg.data as unknown as TransitionRecord[])
       break
     case 'disconnected':
-      store.connected = false
-      store.connecting = false
+      conn.connected = false
+      conn.connecting = false
       break
     case 'error':
       console.error('Server error:', msg.message)
-      store.connecting = false
+      conn.connecting = false
       break
   }
 }
@@ -374,9 +376,9 @@ const { tooltip, tooltipAttrs, showTooltip, hideTooltip } = useTooltip()
 onMounted(() => {
   wsConnect()
   setTimeout(() => {
-    if (!store.connected && !store.connecting) {
-      store.connecting = true
-      wsSend({ type: 'connect', host: store.host, port: store.port })
+    if (!conn.connected && !conn.connecting) {
+      conn.connecting = true
+      wsSend({ type: 'connect', host: conn.host, port: conn.port })
     }
   }, 500)
 })

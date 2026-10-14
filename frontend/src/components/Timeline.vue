@@ -2,7 +2,7 @@
   <section class="bottom-drawer timeline" aria-label="Timeline">
     <div class="tl-header">
       <span class="tl-title">Timeline</span>
-      <button class="btn" :class="tl.recording ? 'btn-danger' : 'btn-primary'" :disabled="!store.connected" @click="toggleRecord">
+      <button class="btn" :class="tl.recording ? 'btn-danger' : 'btn-primary'" :disabled="!conn.connected" @click="toggleRecord">
         {{ tl.recording ? 'Stop' : 'Record' }}
       </button>
       <button class="btn" :disabled="!tl.records.length" @click="tl.clear()">Clear</button>
@@ -48,6 +48,7 @@
 import PanelClose from './PanelClose.vue'
 import { computed } from 'vue'
 import { useTreeStore } from '../stores/treeStore'
+import { useConnectionStore } from '../stores/connectionStore'
 import { useTimelineStore } from '../stores/timelineStore'
 import { toLanes, exportJson } from '../lib/timeline'
 
@@ -55,6 +56,7 @@ const props = defineProps<{ send: (msg: Record<string, unknown>) => void }>()
 const emit = defineEmits<{ (e: 'select-node', uid: number): void }>()
 
 const store = useTreeStore()
+const conn = useConnectionStore()
 const tl = useTimelineStore()
 
 const MAX_LOG_ROWS = 500
