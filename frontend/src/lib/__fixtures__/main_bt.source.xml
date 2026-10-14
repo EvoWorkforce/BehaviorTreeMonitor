@@ -1,0 +1,706 @@
+<root BTCPP_format="4" main_tree_to_execute="main_bt">
+    <TreeNodesModel>
+        <Condition ID="IsAutonomousOperation">
+            <input_port name="is_autonomous_operation" type="bool"/>
+        </Condition>
+        <Condition ID="IsCharging">
+            <input_port name="is_charging" type="bool"/>
+        </Condition>
+        <Condition ID="IsStoodDown"/>
+        <Action ID="Dock">
+            <output_port name="error_code" type="int"/>
+            <output_port name="failure_message" type="std::string"/>
+        </Action>
+        <Action ID="WaitUntilCharged">
+            <input_port name="battery_soc" type="double"/>
+            <input_port name="target_soc" type="double"/>
+        </Action>
+        <Action ID="WaitUntilCharging">
+            <input_port name="is_charging" type="bool"/>
+            <input_port name="timeout_sec" type="double"/>
+        </Action>
+        <Action ID="WaitUntilCooled">
+            <input_port name="temperature" type="int"/>
+            <input_port name="target_temp" type="int"/>
+        </Action>
+        <Action ID="Undock"/>
+        <Action ID="Sleep">
+            <input_port name="msec" type="unsigned int"/>
+        </Action>
+        <Action ID="StandDown"/>
+        <Action ID="StandUp"/>
+        <Action ID="SelectSection">
+            <input_port name="route"/>
+            <input_port name="index"/>
+            <input_port name="skip_base" type="bool"/>
+            <output_port name="to_wp"/>
+            <output_port name="locomotion_mode"/>
+            <output_port name="target_index"/>
+            <output_port name="to_action_set"/>
+            <output_port name="to_action_count" type="int"/>
+            <output_port name="to_context" type="std::string"/>
+            <output_port name="to_localization_source" type="unsigned char"/>
+        </Action>
+        <Action ID="SetLocomotionMode">
+            <input_port name="mode"/>
+            <input_port name="reported_mode"/>
+            <input_port name="topic_name" type="std::string"/>
+            <input_port name="controller_id" type="unsigned char"/>
+            <input_port name="settle_delay_sec" type="double"/>
+            <input_port name="confirm_timeout_sec" type="double"/>
+            <input_port name="republish_interval_sec" type="double"/>
+        </Action>
+        <Action ID="ExecuteActions">
+            <input_port name="action_set"/>
+            <input_port name="context" type="std::string"/>
+            <input_port name="cancel_requested" type="bool"/>
+            <input_port name="cancel_timeout_s" type="double"/>
+            <output_port name="actions_outcome"/>
+        </Action>
+        <Action ID="GoToPose">
+            <input_port name="target"/>
+            <input_port name="locomotion_mode"/>
+            <output_port name="section_result"/>
+            <output_port name="distance_remaining_m"/>
+        </Action>
+        <Action ID="AdvanceRoute">
+            <input_port name="route"/>
+            <inout_port name="index"/>
+            <inout_port name="pending"/>
+            <input_port name="skip_base" type="bool"/>
+            <output_port name="at_base"/>
+        </Action>
+        <Action ID="JoinRoute">
+            <input_port name="route"/>
+            <input_port name="strategy" type="std::string"/>
+            <input_port name="robot_pose"/>
+            <input_port name="localization_source"/>
+            <input_port name="max_join_distance_m" type="float"/>
+            <inout_port name="index"/>
+            <output_port name="index_valid"/>
+        </Action>
+        <Action ID="RoundBoundary">
+            <input_port name="route"/>
+            <input_port name="index"/>
+            <input_port name="heading_home" type="bool"/>
+        </Action>
+        <Condition ID="RouteMatchesRecorder">
+            <input_port name="route_matches_recorder" type="bool"/>
+        </Condition>
+
+        <!-- Subtree signatures. Declaring them turns a forgotten remap into a
+             load-time error instead of a silently missing value. -->
+        <SubTree ID="decide"/>
+        <SubTree ID="RouteSection">
+            <input_port name="heading_home"/>
+            <input_port name="route"/>
+            <input_port name="index"/>
+            <input_port name="skip_base"/>
+            <input_port name="reported_mode"/>
+            <input_port name="localization_source"/>
+            <output_port name="route_failure_message"/>
+            <output_port name="section_result"/>
+            <output_port name="section_target_index"/>
+            <output_port name="section_action_set"/>
+            <output_port name="section_action_count"/>
+            <output_port name="section_context"/>
+        </SubTree>
+        <!-- Runs the actions recorded on the waypoint just reached. An interrupt cancels the set and
+             waits for it to unwind, then the subtree SUCCEEDs so the route
+             steps on, and the boundary guards deal with the state that
+             interrupted it (ADR 0007). -->
+        <SubTree ID="WaypointActions">
+            <input_port name="action_set"/>
+            <input_port name="context"/>
+            <input_port name="battery_soc"/>
+            <input_port name="temperature"/>
+            <inout_port name="pending_request"/>
+            <inout_port name="cancel_actions"/>
+            <inout_port name="waypoint_actions_running"/>
+            <inout_port name="is_stood_down"/>
+            <output_port name="actions_outcome"/>
+        </SubTree>
+        <!-- The one walk: a patrol (heading_home false) or the trip to base
+             (heading_home true). It is the union of what the two old walks
+             took. -->
+        <SubTree ID="RouteWalker">
+            <input_port name="heading_home"/>
+            <input_port name="route"/>
+            <input_port name="join_strategy"/>
+            <input_port name="robot_pose"/>
+            <input_port name="reported_mode"/>
+            <input_port name="battery_soc"/>
+            <input_port name="temperature"/>
+            <input_port name="is_charging"/>
+            <input_port name="route_matches_recorder"/>
+            <input_port name="dock_commanded"/>
+            <input_port name="dock_cancel_requested"/>
+            <input_port name="localization_source"/>
+            <output_port name="route_failure_message"/>
+            <inout_port name="index"/>
+            <inout_port name="index_valid"/>
+            <inout_port name="at_base"/>
+            <inout_port name="pending_request"/>
+            <inout_port name="is_charging_state"/>
+            <inout_port name="is_stood_down"/>
+            <inout_port name="operation_failed"/>
+            <inout_port name="cancel_actions"/>
+            <inout_port name="waypoint_actions_running"/>
+            <output_port name="section_result"/>
+            <output_port name="section_target_index"/>
+        </SubTree>
+    </TreeNodesModel>
+
+    <!-- One decision, then the phase it selects (spec section 6). -->
+    <BehaviorTree ID="main_bt">
+        <ReactiveSequence name="autonomous_guard">
+            <IsAutonomousOperation is_autonomous_operation="{is_autonomous_operation}"/>
+            <SubTree ID="decide"/>
+            <ReactiveSequence name="dispatch">
+                <!-- An idle phase hands over at once, so a new decision starts in the same tick. -->
+                <Fallback name="idle_adopts_the_decision">
+                    <ScriptCondition code="phase != 'idle'"/>
+                    <Script code="phase := desired_phase; phase_reason := desired_reason"/>
+                </Fallback>
+                <Switch5 variable="{phase}" case_1="walk" case_2="docking"
+                         case_3="hold" case_4="undocking" case_5="standdown">
+                    <!-- walk: ends at a section boundary. A new direction restarts the walk in the same
+                         tick; any other hand-over writes phase and yields one tick. -->
+                    <KeepRunningUntilFailure name="walk_phase">
+                        <Sequence name="walk_leg">
+                            <Script code="route_failed := false"/>
+                            <RetryUntilSuccessful num_attempts="-1" name="restart_on_new_direction">
+                                <Sequence name="one_walk">
+                                    <!-- The walk keeps the direction it started with: decide may flip
+                                         heading_home mid-section, and the walk reads it only here. -->
+                                    <Fallback name="enter_walk">
+                                        <Sequence name="enter_home_walk">
+                                            <ScriptCondition code="heading_home"/>
+                                            <Script code="walk_heading_home := true; phase_reason := desired_reason"/>
+                                        </Sequence>
+                                        <Script code="walk_heading_home := false; phase_reason := desired_reason; dock_cancel_requested := false"/>
+                                    </Fallback>
+                                    <Fallback name="walk_outcome">
+                                        <!-- A commanded dock on the contacts walks nowhere. -->
+                                        <Sequence name="dock_without_walking">
+                                            <ScriptCondition code="walk_heading_home &amp;&amp; dock_skip_walk"/>
+                                            <Script code="phase := 'docking'"/>
+                                        </Sequence>
+                                        <Sequence name="arrive_at_base">
+                                            <SubTree ID="RouteWalker" name="walk_the_route"
+                                                     heading_home="{walk_heading_home}"
+                                                     dock_cancel_requested="{dock_cancel_requested}"
+                                                     route="{patrol_waypoints}"
+                                                     join_strategy="{join_strategy}"
+                                                     robot_pose="{robot_pose}"
+                                                     reported_mode="{locomotion_mode}"
+                                                     battery_soc="{battery_soc}"
+                                                     temperature="{temperature}"
+                                                     is_charging="{is_charging}"
+                                                     route_matches_recorder="{route_matches_recorder}"
+                                                     dock_commanded="{dock_commanded}"
+                                                     localization_source="{localization_source}"
+                                                     route_failure_message="{route_failure_message}"
+                                                     index="{index}"
+                                                     index_valid="{index_valid}"
+                                                     at_base="{at_base}"
+                                                     pending_request="{pending_request}"
+                                                     is_charging_state="{is_charging_state}"
+                                                     is_stood_down="{is_stood_down}"
+                                                     operation_failed="{operation_failed}"
+                                                     cancel_actions="{cancel_actions}"
+                                                     waypoint_actions_running="{waypoint_actions_running}"
+                                                     section_result="{section_result}"
+                                                     section_target_index="{section_target_index}"/>
+                                            <!-- The mission hears of the arrival on its next step. A robot with no dock
+                                                 (G1) ends the trip stood down at the base instead. -->
+                                            <Script code="home_reached := true"/>
+                                            <Fallback name="base_is_the_destination">
+                                                <Sequence name="dock_at_base">
+                                                    <ScriptCondition code="dock_available"/>
+                                                    <Script code="phase := 'docking'"/>
+                                                </Sequence>
+                                                <Script code="phase := 'standdown'"/>
+                                            </Fallback>
+                                        </Sequence>
+                                        <!-- A failed section ends the mission; the check after the retry fails the walk. -->
+                                        <Sequence name="route_failure_aborts">
+                                            <ScriptCondition code="route_failed"/>
+                                            <Script code="operation_failed := true; mission_outcome := 'aborted'; mission_reason := 'route_failure'; phase := 'idle'"/>
+                                        </Sequence>
+                                        <!-- The round boundary may have changed the mission since this tick's decision. -->
+                                        <Sequence name="decide_again">
+                                            <SubTree ID="decide"/>
+                                            <AlwaysFailure/>
+                                        </Sequence>
+                                        <Sequence name="decide_takes_over">
+                                            <ScriptCondition code="desired_phase != 'walk'"/>
+                                            <Script code="phase := desired_phase; phase_reason := desired_reason"/>
+                                        </Sequence>
+                                        <!-- Same direction, nothing decide knows stopped it (the route changed under the robot). -->
+                                        <Sequence name="walk_cannot_continue">
+                                            <ScriptCondition code="heading_home == walk_heading_home"/>
+                                            <Script code="phase := 'idle'; mission_outcome := 'succeeded'"/>
+                                        </Sequence>
+                                        <!-- A new direction: fail, so the retry walks again at once. -->
+                                        <AlwaysFailure/>
+                                    </Fallback>
+                                </Sequence>
+                            </RetryUntilSuccessful>
+                            <ScriptCondition code="!route_failed"/>
+                        </Sequence>
+                    </KeepRunningUntilFailure>
+
+                    <!-- docking: undock if on the contacts, dock, confirm charging; the retry budget is 4. -->
+                    <Fallback name="docking_phase">
+                        <Sequence name="dock_and_confirm">
+                            <RetryUntilSuccessful num_attempts="4">
+                                <!-- No tag in view (error 1) is terminal: the retries burn without dispatching. -->
+                                <Sequence name="docking_attempt"
+                                          _failureIf="dock_error == 1">
+                                    <!-- Dock writes 'docked' on success and nowhere else: it says the robot is on the contacts. -->
+                                    <Fallback name="off_the_contacts_first">
+                                        <ScriptCondition code="!on_contacts"/>
+                                        <Undock/>
+                                    </Fallback>
+                                    <Dock error_code="{dock_error}"
+                                          failure_message="{dock_failure_message}"/>
+                                    <WaitUntilCharging is_charging="{is_charging}"
+                                                       timeout_sec="7.0"/>
+                                </Sequence>
+                            </RetryUntilSuccessful>
+                            <!-- Charging is confirmed. A mission whose rounds are done ends here, and the robot stays
+                                 parked on the charger. -->
+                            <Fallback name="mission_ends_on_the_charger">
+                                <Inverter>
+                                    <ScriptCondition code="mission_complete"/>
+                                </Inverter>
+                                <Script code="mission_outcome := 'succeeded'; mission_parked := true"/>
+                            </Fallback>
+                            <Script code="phase := 'hold'"/>
+                            <KeepRunningUntilFailure>
+                                <AlwaysSuccess/>
+                            </KeepRunningUntilFailure>
+                        </Sequence>
+                        <!-- A docking failure ends the mission. A missing tag leaves the robot standing. -->
+                        <Sequence name="docking_failure_standdown">
+                            <StandDown _skipIf="dock_error == 1"/>
+                            <Script code="operation_failed := true; dock_commanded := false; dock_skip_walk := false; undock_commanded := false; mission_outcome := 'aborted'; mission_reason := 'route_failure'; phase := 'idle'"/>
+                            <AlwaysFailure/>
+                        </Sequence>
+                    </Fallback>
+
+                    <!-- hold: parked on the charger. It never succeeds, and releases only to the exit undock. -->
+                    <Sequence name="hold_phase">
+                        <ReactiveFallback name="charge_hold">
+                            <ScriptCondition code="undock_commanded"/>
+                            <!-- A plain Sequence: both waits return RUNNING on start and would halt each other. -->
+                            <Sequence>
+                                <Inverter>
+                                    <ScriptCondition code="dock_commanded || mission_parked"/>
+                                </Inverter>
+                                <WaitUntilCharged battery_soc="{battery_soc}"
+                                                  target_soc="{@battery_charged_soc}"/>
+                                <WaitUntilCooled temperature="{temperature}"
+                                                 target_temp="{@temperature_cooled}"/>
+                                <!-- Charged and cooled, but the next window is not open (rung 8): stay. -->
+                                <Inverter>
+                                    <ScriptCondition code="waiting_for_window"/>
+                                </Inverter>
+                            </Sequence>
+                            <KeepRunningUntilFailure>
+                                <AlwaysSuccess/>
+                            </KeepRunningUntilFailure>
+                        </ReactiveFallback>
+                        <Script code="phase := 'undocking'"/>
+                        <KeepRunningUntilFailure>
+                            <AlwaysSuccess/>
+                        </KeepRunningUntilFailure>
+                    </Sequence>
+
+                    <!-- undocking: off the contacts, clear the operator latches, say what the robot is now,
+                         then decide again. -->
+                    <Sequence name="undocking_phase">
+                        <Undock/>
+                        <Script code="dock_commanded := false; undock_commanded := false; dock_skip_walk := false; mission_parked := false"/>
+                        <!-- A dock that interrupted a patrol resumes it; an operator undock ends the goal's work and leaves the robot idle. -->
+                        <Fallback name="post_undock_disposition">
+                            <Sequence name="resume">
+                                <ScriptCondition code="resume_patrol"/>
+                                <SubTree ID="decide"/>
+                                <Script code="phase := desired_phase; phase_reason := desired_reason"/>
+                            </Sequence>
+                            <Script name="goal_done" code="mission_outcome := 'succeeded'; phase := 'idle'"/>
+                        </Fallback>
+                        <KeepRunningUntilFailure>
+                            <AlwaysSuccess/>
+                        </KeepRunningUntilFailure>
+                    </Sequence>
+
+                    <!-- standdown: lie down. Critical battery ends the mission; a thermal pause stands up at 65. -->
+                    <Sequence name="standdown_phase">
+                        <Fallback name="lie_down">
+                            <IsStoodDown/>
+                            <StandDown/>
+                        </Fallback>
+                        <Fallback name="standdown_ends">
+                            <Sequence name="critical_battery_ends_the_mission">
+                                <ScriptCondition code="battery_critical"/>
+                                <Script code="operation_failed := true; mission_outcome := 'aborted'; mission_reason := 'critical_battery'; phase := 'idle'"/>
+                            </Sequence>
+                            <!-- A robot with no dock (G1) ends its rounds stood down at the base. A stand-down
+                                 for a level (reasons 6 and 7) is not the base. -->
+                            <Sequence name="mission_ends_stood_down_at_base">
+                                <ScriptCondition code="mission_complete &amp;&amp; phase_reason &lt; 6"/>
+                                <Script code="mission_outcome := 'succeeded'; phase := 'idle'"/>
+                            </Sequence>
+                            <!-- Waiting for a window (rung 8), stood down at base: stay down until decide wants more. -->
+                            <Sequence name="stay_down_while_waiting">
+                                <ScriptCondition code="waiting_for_window &amp;&amp; desired_phase == 'standdown'"/>
+                                <Script code="phase_reason := desired_reason"/>
+                                <ReactiveSequence name="waiting_standdown">
+                                    <ScriptCondition code="waiting_for_window &amp;&amp; desired_phase == 'standdown'"/>
+                                    <KeepRunningUntilFailure>
+                                        <AlwaysSuccess/>
+                                    </KeepRunningUntilFailure>
+                                </ReactiveSequence>
+                            </Sequence>
+                            <Sequence name="thermal_pause">
+                                <WaitUntilCooled temperature="{temperature}"
+                                                 target_temp="{@temperature_critical_off}"/>
+                                <StandUp/>
+                                <Script code="phase := desired_phase; phase_reason := desired_reason"/>
+                                <KeepRunningUntilFailure>
+                                    <AlwaysSuccess/>
+                                </KeepRunningUntilFailure>
+                            </Sequence>
+                        </Fallback>
+                        <!-- Only the critical-battery branch gets here: the goal fails (aborted). -->
+                        <ScriptCondition code="mission_outcome != 'aborted'"/>
+                    </Sequence>
+
+                    <!-- idle (default): stand down for a critical level, else rest; a marked failure stays a failure.
+                         A goal that reaches idle with no outcome set has succeeded. -->
+                    <Fallback name="idle_phase">
+                        <ReactiveSequence name="safety_standdown">
+                            <Fallback name="abnormal_condition">
+                                <ScriptCondition code="@battery_critical"/>
+                                <ScriptCondition code="@temperature_critical"/>
+                            </Fallback>
+                            <Inverter>
+                                <IsStoodDown/>
+                            </Inverter>
+                            <StandDown/>
+                            <Fallback name="mission_outcome_set">
+                                <ScriptCondition code="mission_outcome != 'none'"/>
+                                <Script code="mission_outcome := 'succeeded'"/>
+                            </Fallback>
+                        </ReactiveSequence>
+                        <Sequence name="idle">
+                            <Inverter>
+                                <ScriptCondition code="operation_failed"/>
+                            </Inverter>
+                            <Fallback name="mission_outcome_set">
+                                <ScriptCondition code="mission_outcome != 'none'"/>
+                                <Script code="mission_outcome := 'succeeded'"/>
+                            </Fallback>
+                        </Sequence>
+                    </Fallback>
+                </Switch5>
+            </ReactiveSequence>
+        </ReactiveSequence>
+    </BehaviorTree>
+
+    <!-- The ten rungs of spec section 6, highest priority first. Only this tree writes desired_*. -->
+    <BehaviorTree ID="decide">
+        <Fallback name="decide">
+            <Sequence name="rung_1_no_goal_or_cancel">
+                <ScriptCondition code="!@goal_active"/>
+                <Script code="@desired_phase := 'idle'; @desired_reason := 0; @heading_home := false"/>
+            </Sequence>
+            <Sequence name="rung_2_critical_battery">
+                <ScriptCondition code="@battery_critical"/>
+                <Script code="@desired_phase := 'standdown'; @desired_reason := 6; @heading_home := false"/>
+            </Sequence>
+            <Sequence name="rung_3_critical_temperature">
+                <ScriptCondition code="@temperature_critical"/>
+                <Script code="@desired_phase := 'standdown'; @desired_reason := 7; @heading_home := false"/>
+            </Sequence>
+            <Sequence name="rung_4_operator_dock">
+                <ScriptCondition code="@dock_commanded &amp;&amp; !@dock_cancel_requested"/>
+                <Script code="@desired_phase := 'walk'; @desired_reason := 1; @heading_home := true"/>
+            </Sequence>
+            <Sequence name="rung_5_low_battery">
+                <ScriptCondition code="@battery_low"/>
+                <Script code="@desired_phase := 'walk'; @desired_reason := 2; @heading_home := true"/>
+            </Sequence>
+            <Sequence name="rung_6_high_temperature">
+                <ScriptCondition code="@temperature_high"/>
+                <Script code="@desired_phase := 'walk'; @desired_reason := 3; @heading_home := true"/>
+            </Sequence>
+            <Sequence name="rung_7_round_end">
+                <ScriptCondition code="@round_end_go_home"/>
+                <Script code="@desired_phase := 'walk'; @desired_reason := @round_end_reason; @heading_home := true"/>
+            </Sequence>
+            <Sequence name="rung_8_waiting_for_window">
+                <ScriptCondition code="@waiting_for_window"/>
+                <Script code="@desired_phase := @dock_available ? 'hold' : 'standdown'; @desired_reason := 0; @heading_home := false"/>
+            </Sequence>
+            <!-- A patrol goal: a patrol, a trip to base, or a dock excursion that resumes the patrol. -->
+            <Sequence name="rung_9_patrol">
+                <ScriptCondition code="@resume_patrol"/>
+                <Script code="@desired_phase := 'walk'; @desired_reason := 0; @heading_home := false"/>
+            </Sequence>
+            <Script name="rung_10_idle" code="@desired_phase := 'idle'; @desired_reason := 0; @heading_home := false"/>
+        </Fallback>
+    </BehaviorTree>
+
+    <!-- One section of a route: read it, put the robot in the right locomotion
+         mode, then walk it. SetLocomotionMode is retried, GoToPose is not: a
+         GoToPose FAILURE means RESULT_INTERRUPTED, and retrying that would
+         fight the decision that caused it. -->
+    <BehaviorTree ID="RouteSection">
+        <Sequence name="route_section">
+            <!-- skip_base is the SAME value the loop's AdvanceRoute is
+                 given. It belongs on the target: a base is skipped by never
+                 being approached, so filtering only the index left the base a
+                 target anyway and cost the waypoint after it. -->
+            <SelectSection route="{route}" index="{index}"
+                           skip_base="{skip_base}"
+                           heading_home="{heading_home}"
+                           to_wp="{to_wp}" locomotion_mode="{section_mode}"
+                           target_index="{section_target_index}"
+                           to_action_set="{section_action_set}"
+                           to_action_count="{section_action_count}"
+                           to_context="{section_context}"
+                           to_localization_source="{section_localization_source}"/>
+            <!-- The section's target waypoint was recorded on one localizer;
+                 the selector must name the same one. A selector that is still
+                 switching gets one 2 s retry, then the route fails with a
+                 reason the operator can read (describe_failure prefers
+                 route_failure_message). Evaluated at the section boundary,
+                 like every guard here (ADR 0003). -->
+            <Fallback name="localization_source_guard">
+                <ScriptCondition code="section_localization_source == localization_source"/>
+                <Sequence name="localization_source_retry">
+                    <Sleep msec="2000"/>
+                    <ScriptCondition code="section_localization_source == localization_source"/>
+                </Sequence>
+                <Sequence name="localization_source_mismatch">
+                    <Script code="route_failure_message := 'localization_source_mismatch'"/>
+                    <AlwaysFailure/>
+                </Sequence>
+            </Fallback>
+            <RetryUntilSuccessful num_attempts="3">
+                <SetLocomotionMode mode="{section_mode}"
+                                   reported_mode="{reported_mode}"
+                                   controller_id="2"
+                                   settle_delay_sec="1.0"
+                                   confirm_timeout_sec="5.0"
+                                   republish_interval_sec="0.5"/>
+            </RetryUntilSuccessful>
+            <GoToPose target="{to_wp}" locomotion_mode="{section_mode}"
+                      section_result="{section_result}"/>
+        </Sequence>
+    </BehaviorTree>
+
+    <!-- The walk, for a patrol (heading_home false) and for the trip to base
+         (heading_home true). The loop body is a PLAIN Sequence on purpose: it
+         holds its position once RouteSection returns RUNNING, so the guards
+         above it are evaluated once per section and never mid-section. A
+         _while precondition here would reinstate the mid-section halt this
+         design exists to remove.
+
+         Heading home the guards are the trip's own: !battery_low and
+         !temperature_high are false by construction, since the robot is going
+         to base because one of them is. The base is the destination, so it is
+         not skipped; the walk ends when AdvanceRoute reaches it, after the
+         actions flagged run_on_go_to_base have run there. An infinite loop
+         can only exit by FAILURE, so arrival is translated into SUCCESS by the
+         final Fallback rather than being retried. A patrol never succeeds. -->
+    <BehaviorTree ID="RouteWalker">
+        <Sequence name="route_walker">
+            <!-- skip_base is the SAME value the loop's AdvanceRoute is given
+                 (see RouteSection). -->
+            <Script code="skip_base := !heading_home"/>
+            <!-- section_action_count is written by every RouteSection tick, but
+                 a pending request can skip the first one, and the actions
+                 step below reads it. -->
+            <Script code="section_action_count := 0"/>
+            <JoinRoute _skipIf="index_valid" route="{route}"
+                       strategy="{join_strategy}" robot_pose="{robot_pose}"
+                       index="{index}" index_valid="{index_valid}"/>
+            <Fallback name="walk_until_done">
+                <KeepRunningUntilFailure>
+                    <Sequence name="route_section_loop">
+                        <!-- The round boundary (spec section 5): a patrol that stands before the section passing the
+                             base has walked a round. A changed route file holds the walk here until it is read again,
+                             and the join asks for the new route. A round end latches round_end_go_home, which the
+                             guards below see: the walk ends at the boundary and the next decide heads home. -->
+                        <RoundBoundary route="{route}" index="{index}"
+                                       heading_home="{heading_home}"/>
+                        <JoinRoute _skipIf="index_valid" route="{route}"
+                                   strategy="{join_strategy}" robot_pose="{robot_pose}"
+                                   index="{index}" index_valid="{index_valid}"/>
+                        <Fallback name="boundary_guards">
+                            <Sequence name="home_guards">
+                                <ScriptCondition code="heading_home"/>
+                                <ScriptCondition code="!@temperature_critical"/>
+                                <ScriptCondition code="!@battery_critical"/>
+                                <!-- A withdrawn dock request ends the walk
+                                     here, at the section boundary only,
+                                     never mid-section. main_bt owns what
+                                     happens next. -->
+                                <Inverter>
+                                    <ScriptCondition code="dock_cancel_requested"/>
+                                </Inverter>
+                                <RouteMatchesRecorder
+                                    route_matches_recorder="{route_matches_recorder}"/>
+                            </Sequence>
+                            <Sequence name="patrol_guards">
+                                <ScriptCondition code="!heading_home"/>
+                                <!-- Boundary interrupt only, same idiom as
+                                     the other guards in this plain Sequence:
+                                     it is evaluated once per section and never
+                                     mid-section, so an in-patrol dock request
+                                     hands over at the next boundary rather
+                                     than cutting the current walk short.
+                                     Mirrors needs_dock_trigger's own
+                                     dock_commanded read on the charge_branch
+                                     side that patrol hands off to. -->
+                                <Inverter>
+                                    <ScriptCondition code="dock_commanded"/>
+                                </Inverter>
+                                <ScriptCondition code="!@temperature_critical"/>
+                                <ScriptCondition code="!@battery_low"/>
+                                <ScriptCondition code="!@temperature_high"/>
+                                <ScriptCondition code="!@round_end_go_home"/>
+                                <Inverter>
+                                    <IsCharging is_charging="{is_charging}"/>
+                                </Inverter>
+                                <RouteMatchesRecorder
+                                    route_matches_recorder="{route_matches_recorder}"/>
+                            </Sequence>
+                        </Fallback>
+                        <!-- The ONE thing allowed to cut a section short. A
+                             ReactiveFallback re-ticks its first child on every
+                             tick, including while RouteSection is RUNNING, so
+                             an operator's skip/return request halts the walk
+                             in flight and cancels the GoToPose goal. That is
+                             the point of the request: the waypoint being
+                             skipped is the one the robot is walking to, and a
+                             robot stuck short of an unreachable waypoint must
+                             not have to reach it before the skip takes
+                             effect. The safety guards above stay in the plain
+                             Sequence and remain deferred to the boundary;
+                             only a deliberate operator command interrupts.
+                             Catches both failure sources: an interrupted
+                             GoToPose and an exhausted SetLocomotionMode retry.
+                             A flag on the GoToPose side alone would miss the
+                             second. -->
+                        <Fallback>
+                            <ReactiveFallback name="section_or_pending_request">
+                                <ScriptCondition code="pending_request != 0"/>
+                                <SubTree ID="RouteSection"
+                                         heading_home="{heading_home}"
+                                         route="{route}"
+                                         index="{index}"
+                                         skip_base="{skip_base}"
+                                         reported_mode="{reported_mode}"
+                                         localization_source="{localization_source}"
+                                         route_failure_message="{route_failure_message}"
+                                         section_result="{section_result}"
+                                         section_target_index="{section_target_index}"
+                                         section_action_set="{section_action_set}"
+                                         section_action_count="{section_action_count}"
+                                         section_context="{section_context}"/>
+                            </ReactiveFallback>
+                            <!-- route_failed tells main_bt a section failed, as
+                                 against a stop at a boundary; only a patrol also
+                                 marks the operation failed here. -->
+                            <Sequence name="mark_route_failed">
+                                <Script code="@route_failed := true"/>
+                                <Fallback>
+                                    <ScriptCondition code="heading_home"/>
+                                    <Script code="operation_failed := true"/>
+                                </Fallback>
+                                <AlwaysFailure/>
+                            </Sequence>
+                        </Fallback>
+                        <!-- Between the walk and the advance: `index` still
+                             names the waypoint departed, and the approached
+                             one is section_target_index. Skipped when the walk
+                             gave up short of the waypoint (nothing to act at)
+                             and when the waypoint records no actions (D6), so
+                             a route without any never asks the executor.
+                             Heading home, the set was filtered to the flagged
+                             actions by SelectSection, so a waypoint with none
+                             flagged is skipped too. Named so that it avoids
+                             the main_patrol_route / main_base_route
+                             substrings the tier-1 GoToPose mock reads from its
+                             path. -->
+                        <SubTree ID="WaypointActions" name="actions_at_waypoint"
+                                 _skipIf="section_result != 0 || section_action_count == 0"
+                                 action_set="{section_action_set}"
+                                 context="{section_context}"
+                                 battery_soc="{battery_soc}"
+                                 temperature="{temperature}"
+                                 pending_request="{pending_request}"
+                                 cancel_actions="{cancel_actions}"
+                                 waypoint_actions_running="{waypoint_actions_running}"
+                                 is_stood_down="{is_stood_down}"
+                                 actions_outcome="{actions_outcome}"/>
+                        <AdvanceRoute route="{route}" index="{index}"
+                                      pending="{pending_request}"
+                                      skip_base="{skip_base}" at_base="{at_base}"/>
+                        <Inverter>
+                            <ScriptCondition code="heading_home &amp;&amp; at_base"/>
+                        </Inverter>
+                    </Sequence>
+                </KeepRunningUntilFailure>
+                <!-- A cancel accepted during the last section arrives at base
+                     but must not dock. -->
+                <ScriptCondition code="heading_home &amp;&amp; at_base &amp;&amp; !dock_cancel_requested"/>
+            </Fallback>
+        </Sequence>
+    </BehaviorTree>
+    <!-- The actions of the waypoint just reached. An interrupt (a pending
+         route request, a cancel, a critical temperature or battery) does not
+         halt ExecuteActions: it latches into actions_interrupt, which is
+         ExecuteActions' cancel_requested. The node asks the executor to cancel
+         and stays RUNNING until the canceled set's result is back, so the
+         route does not move on while a handler is still unwinding - stand_down
+         stands the robot up first (D4, ADR 0007). It gives up after
+         cancel_timeout_s, which outlasts the executor's own 10 s grace.
+         ExecuteActions itself always succeeds (D7).
+
+         An interrupt already latched when the subtree is entered skips the
+         set (_skipIf, evaluated only while the node is IDLE): a critical
+         temperature that arose during the walk, or a skip that halted the walk
+         (GoToPose::halt() writes no section_result, so the call site reads the
+         previous section's REACHED). An interrupt that arrives during the set
+         cancels it and waits (ADR 0007).
+
+         The latch is load-bearing: the battery hysteresis, or an operator
+         clearing pending_request, could otherwise flip the request back to
+         false mid-cancel. The levels are written by BTHandler from telemetry.
+         actions_interrupt and cancel_actions are cleared on entry so a cancel
+         that raced the previous exit is discarded. A halt from outside skips
+         the exit script, so ExecuteActions, the node running during the set,
+         clears the flags in its own _onHalted post-condition. BTHandler also
+         clears them when the operation stops. -->
+    <BehaviorTree ID="WaypointActions">
+        <Sequence name="waypoint_actions">
+            <Script code="waypoint_actions_running := true; cancel_actions := false; actions_interrupt := false"/>
+            <ReactiveSequence name="actions_until_done">
+                <Script code="actions_interrupt := actions_interrupt || pending_request != 0 || cancel_actions || @temperature_critical || @battery_critical"/>
+                <ExecuteActions _skipIf="actions_interrupt"
+                                action_set="{action_set}" context="{context}"
+                                cancel_requested="{actions_interrupt}"
+                                actions_outcome="{actions_outcome}"
+                                _onHalted="waypoint_actions_running := false; cancel_actions := false"/>
+            </ReactiveSequence>
+            <Script code="waypoint_actions_running := false; cancel_actions := false"/>
+        </Sequence>
+    </BehaviorTree>
+</root>
