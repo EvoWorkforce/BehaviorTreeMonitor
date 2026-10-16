@@ -37,7 +37,8 @@ export function getNodeHeight(node: TreeNode): number {
 
 function calculateNodeWidth(node: TreeNode): number {
   const ports = getNodePorts(node)
-  const nameWidth = 22 + measureTextWidth(node.name, 7) + 12
+  // Subtree containers also hold the 16px expand button at the right edge, with a gap before it.
+  const nameWidth = 22 + measureTextWidth(node.name, 7) + 12 + (node.isSubtreeContainer ? 28 : 0)
   let maxLabelWidth = 0
   let maxValueWidth = 0
   for (const port of ports) {
