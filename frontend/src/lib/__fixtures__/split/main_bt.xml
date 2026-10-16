@@ -1,0 +1,7 @@
+<root BTCPP_format="4" main_tree_to_execute="main_bt">
+  <include path="bt/walk.xml"/>
+  <include path="bt/route.xml"/>
+  <BehaviorTree ID="main_bt">
+    <SubTree ID="WalkPhase"/>
+  </BehaviorTree>
+</root>
