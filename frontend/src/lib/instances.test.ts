@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { breadcrumb, buildInstanceTree, subtreeOpenPath } from '@/lib/instances'
+import { breadcrumb, buildInstanceTree, collapsedToLevels, maxDepth, subtreeOpenPath, visibleRows } from '@/lib/instances'
 import xml from '../../../tests/fixtures/aom_fulltree.xml?raw'
 
 const doc = () => new DOMParser().parseFromString(xml, 'text/xml')
@@ -84,5 +84,44 @@ describe('subtreeOpenPath', () => {
     expect(subtreeOpenPath(sub(), root)).toBeNull()
     expect(subtreeOpenPath(sub('nope'), root)).toBeNull()
     expect(subtreeOpenPath(sub('main_patrol_route'), null)).toBeNull()
+  })
+})
+
+describe('instance folding', () => {
+  const root = () => buildInstanceTree(doc())!
+  const paths = (rows: { node: { path: string } }[]) => rows.map(r => r.node.path)
+
+  it('maxDepth counts the levels of the instance tree', () => {
+    expect(maxDepth(root())).toBe(3)
+    expect(maxDepth(null)).toBe(0)
+  })
+
+  it('shows every row when nothing is collapsed', () => {
+    const rows = visibleRows(root(), new Set())
+    expect(rows[0]).toMatchObject({ depth: 0 })
+    expect(paths(rows)).toContain('main_patrol_route/RouteSection::25')
+  })
+
+  it('hides the children of a collapsed node but keeps the node', () => {
+    const rows = visibleRows(root(), new Set(['main_patrol_route']))
+    expect(paths(rows)).toContain('main_patrol_route')
+    expect(paths(rows)).not.toContain('main_patrol_route/RouteSection::25')
+    expect(paths(rows)).toContain('main_base_route/RouteSection::83')
+  })
+
+  it('collapsedToLevels(1) leaves only the root', () => {
+    const r = root()
+    expect(paths(visibleRows(r, collapsedToLevels(r, 1)))).toEqual([''])
+  })
+
+  it('collapsedToLevels(2) shows the root and its children', () => {
+    const r = root()
+    expect(paths(visibleRows(r, collapsedToLevels(r, 2)))).toEqual(['', 'main_patrol_route', 'main_base_route'])
+  })
+
+  it('collapsedToLevels at or beyond maxDepth collapses nothing', () => {
+    const r = root()
+    expect(collapsedToLevels(r, 3).size).toBe(0)
+    expect(collapsedToLevels(r, 9).size).toBe(0)
   })
 })

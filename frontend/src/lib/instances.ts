@@ -71,3 +71,41 @@ export function subtreeOpenPath(
   const has = (n: InstanceNode): boolean => n.path === path || n.children.some(has)
   return has(root) ? path : null
 }
+
+/** Key of an instance in a collapsed set: its path, or this marker for the root. */
+export const ROOT_KEY = '__root__'
+
+const keyOf = (n: InstanceNode): string => n.path || ROOT_KEY
+
+/** Number of levels in the instance tree; the root alone is 1, no tree is 0. */
+export function maxDepth(root: InstanceNode | null): number {
+  if (!root) return 0
+  const depth = (n: InstanceNode): number => 1 + Math.max(0, ...n.children.map(depth))
+  return depth(root)
+}
+
+/** The rows to show, in order, skipping the children of every collapsed node. */
+export function visibleRows(
+  root: InstanceNode | null,
+  collapsed: ReadonlySet<string>,
+): { node: InstanceNode; depth: number }[] {
+  const out: { node: InstanceNode; depth: number }[] = []
+  const walk = (n: InstanceNode, depth: number) => {
+    out.push({ node: n, depth })
+    if (collapsed.has(keyOf(n))) return
+    n.children.forEach(c => walk(c, depth + 1))
+  }
+  if (root) walk(root, 0)
+  return out
+}
+
+/** The collapsed set that shows exactly `levels` levels; empty when that is all of them. */
+export function collapsedToLevels(root: InstanceNode | null, levels: number): Set<string> {
+  const out = new Set<string>()
+  const walk = (n: InstanceNode, depth: number) => {
+    if (depth === levels - 1 && n.children.length) out.add(keyOf(n))
+    else n.children.forEach(c => walk(c, depth + 1))
+  }
+  if (root) walk(root, 0)
+  return out
+}

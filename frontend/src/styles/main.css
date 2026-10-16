@@ -187,6 +187,15 @@ html, body {
 .rail-dot.running { background: var(--status-running); }
 .rail-dot.success { background: var(--status-success); }
 .rail-dot.failure { background: var(--status-failure); }
+.rail-levels { display: flex; align-items: center; gap: 4px; padding: 0 12px 8px; }
+.rail-levels-label { font-size: 11px; color: var(--text-muted); margin-right: 4px; }
+.rail-level { min-width: 24px; padding: 2px 6px; font-size: 11px; cursor: pointer; color: var(--text-secondary); background: transparent; border: 1px solid var(--border-color); border-radius: 4px; }
+.rail-level:hover { background: var(--bg-tertiary); }
+.rail-level.active { background: var(--bg-tertiary); color: var(--text-primary); border-color: var(--text-muted); }
+.rail-chevron, .rail-chevron-gap { width: 14px; flex: none; }
+.rail-chevron { padding: 0; font-size: 12px; line-height: 1; cursor: pointer; color: var(--text-muted); background: transparent; border: 0; transition: transform 0.1s; }
+.rail-chevron:hover { color: var(--text-primary); }
+.rail-chevron.collapsed { transform: rotate(-90deg); }
 .rail-empty { padding: 12px; font-size: 12px; color: var(--text-muted); }
 .breadcrumb { display: flex; align-items: center; gap: 4px; font-size: 12px; }
 .crumb { background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 4px; padding: 3px 8px; color: var(--text-secondary); cursor: pointer; }
