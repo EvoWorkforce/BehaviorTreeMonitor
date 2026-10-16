@@ -80,3 +80,24 @@ export async function collectIncludedSources(
   const err = await visit(root)
   return err ? { error: err } : { sources }
 }
+
+/** SubTree IDs that some document calls and no document defines, in first-call order. */
+export function missingSubtreeIds(docs: Document[]): string[] {
+  const defined = new Set(docs.flatMap(treeIds))
+  const missing: string[] = []
+  for (const d of docs) {
+    for (const el of Array.from(d.getElementsByTagName('SubTree'))) {
+      const id = el.getAttribute('ID') ?? ''
+      if (id !== '' && !defined.has(id) && !missing.includes(id)) missing.push(id)
+    }
+  }
+  return missing
+}
+
+/** Files in the root's folder, then in its parent folder; the root itself is excluded. */
+export function siblingCandidates(rootPath: string, files: TreeFileInfo[]): TreeFileInfo[] {
+  const dir = dirname(rootPath)
+  const parent = dirname(dir)
+  const inDir = (d: string) => files.filter((f) => f.path !== rootPath && dirname(f.path) === d)
+  return dir === '' ? inDir(dir) : [...inDir(dir), ...inDir(parent)]
+}

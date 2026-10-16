@@ -1,7 +1,13 @@
 // Converts a loaded source document into the "live shape": one <BehaviorTree> block per
 // SubTree instance with `_fullpath` and `_uid`, as the runtime's FULLTREE does.
 
-export type LiveShape = { doc: Document; sourceIndexByUid: Record<string, number> }
+export type LiveShape = {
+  doc: Document
+  sourceIndexByUid: Record<string, number>
+  sourceFileByUid: Record<string, string>
+}
+
+export type ExtraDoc = { fileKey: string; doc: Document }
 
 function copyAttrs(from: Element, to: Element, skip?: string) {
   for (const a of Array.from(from.attributes)) if (a.name !== skip) to.setAttribute(a.name, a.value)
@@ -14,28 +20,39 @@ function cloneModel(src: Element, out: Document): Element {
   return el
 }
 
-export function toLiveShape(doc: Document): LiveShape | { error: string } {
+export function toLiveShape(doc: Document, extra: ExtraDoc[] = []): LiveShape | { error: string } {
   const srcRoot = doc.documentElement
   const blocks = Array.from(doc.getElementsByTagName('BehaviorTree'))
+  const all: ExtraDoc[] = [{ fileKey: '', doc }, ...extra]
   const byId = new Map<string, Element>()
-  for (const b of blocks) {
-    const id = b.getAttribute('ID')
-    if (id && !byId.has(id)) byId.set(id, b)
+  const fileOf = new Map<Element, string>()
+  const srcIndex = new Map<Element, number>()
+  for (const d of all) {
+    Array.from(d.doc.getElementsByTagName('*')).forEach((e, i) => {
+      srcIndex.set(e, i)
+      fileOf.set(e, d.fileKey)
+    })
+    for (const b of Array.from(d.doc.getElementsByTagName('BehaviorTree'))) {
+      const id = b.getAttribute('ID')
+      if (id && !byId.has(id)) byId.set(id, b)
+    }
   }
   const mainId = srcRoot.getAttribute('main_tree_to_execute') ?? blocks[0]?.getAttribute('ID') ?? ''
   const main = byId.get(mainId)
   if (!main) return { error: `No <BehaviorTree> found for "${mainId}"` }
 
-  const srcIndex = new Map<Element, number>()
-  Array.from(doc.getElementsByTagName('*')).forEach((e, i) => srcIndex.set(e, i))
-
   const out = new DOMParser().parseFromString('<root/>', 'text/xml')
   const outRoot = out.documentElement
   outRoot.setAttribute('main_tree_to_execute', mainId)
-  const model = Array.from(srcRoot.children).find((c) => c.tagName === 'TreeNodesModel')
-  if (model) outRoot.appendChild(cloneModel(model, out))
+  const models = all.flatMap((d) => Array.from(d.doc.documentElement.children).filter((c) => c.tagName === 'TreeNodesModel'))
+  if (models.length > 0) {
+    const outModel = out.createElementNS(null, 'TreeNodesModel')
+    for (const m of models) for (const c of Array.from(m.children)) outModel.appendChild(cloneModel(c, out))
+    outRoot.appendChild(outModel)
+  }
 
   const sourceIndexByUid: Record<string, number> = {}
+  const sourceFileByUid: Record<string, string> = {}
   let uidCounter = 0
   const counters = new Map<string, number>()
   let error: string | null = null
@@ -44,6 +61,7 @@ export function toLiveShape(doc: Document): LiveShape | { error: string } {
     const uid = `o${++uidCounter}`
     el.setAttribute('_uid', uid)
     sourceIndexByUid[uid] = srcIndex.get(src)!
+    sourceFileByUid[uid] = fileOf.get(src) ?? ''
   }
 
   const emitNode = (src: Element, parentPath: string, stack: string[]): Element => {
@@ -84,5 +102,5 @@ export function toLiveShape(doc: Document): LiveShape | { error: string } {
 
   emitBlock(main, '', [mainId])
   if (error) return { error }
-  return { doc: out, sourceIndexByUid }
+  return { doc: out, sourceIndexByUid, sourceFileByUid }
 }

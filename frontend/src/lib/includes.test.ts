@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { resolveIncludePath, collectIncludedSources, type SourceFile } from './includes'
+import { resolveIncludePath, collectIncludedSources, missingSubtreeIds, siblingCandidates, type SourceFile } from './includes'
 import { loadSourceTree } from './source'
 import type { TreeFileInfo } from './treeFiles'
 import mainXml from './__fixtures__/split/main_bt.xml?raw'
@@ -108,5 +108,26 @@ describe('collectIncludedSources', () => {
     const r = await collectIncludedSources(rootOf('/t/main_bt.xml', main), files, read)
     expect('error' in r && r.error).toContain('ros_pkg')
     expect('error' in r && r.error).toContain('not resolved')
+  })
+})
+
+describe('missingSubtreeIds', () => {
+  const doc = (s: string) => {
+    const l = loadSourceTree(s)
+    if ('error' in l) throw new Error(l.error)
+    return l.doc
+  }
+  it('lists only SubTree IDs no document defines', () => {
+    const a = doc(`<root BTCPP_format="4" main_tree_to_execute="m"><BehaviorTree ID="m"><Sequence><SubTree ID="A"/><SubTree ID="B"/><SubTree ID="B"/></Sequence></BehaviorTree></root>`)
+    const b = doc(`<root BTCPP_format="4"><BehaviorTree ID="A"><SubTree ID="C"/></BehaviorTree></root>`)
+    expect(missingSubtreeIds([a, b])).toEqual(['B', 'C'])
+  })
+})
+
+describe('siblingCandidates', () => {
+  const f = (path: string): TreeFileInfo => ({ id: path, path, folder: path.slice(0, path.lastIndexOf('/')), editable: true })
+  it('orders same-folder files before parent-folder files and excludes the root', () => {
+    const all = ['/t/p/root.xml', '/t/p/a.xml', '/t/b.xml', '/t/p/sub/c.xml', '/x/d.xml', '/t/p/z.xml'].map(f)
+    expect(siblingCandidates('/t/p/root.xml', all).map((x) => x.path)).toEqual(['/t/p/a.xml', '/t/p/z.xml', '/t/b.xml'])
   })
 })
