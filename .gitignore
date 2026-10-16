@@ -17,3 +17,4 @@ uv.lock
 .pnpm-store/
 
 .claude/
+.scratch
