@@ -90,3 +90,52 @@ describe('toLiveShape', () => {
     expect('error' in toLiveShape(loaded.doc)).toBe(true)
   })
 })
+
+describe('toLiveShape across files', () => {
+  const mainText = `<root BTCPP_format="4" main_tree_to_execute="main">
+  <BehaviorTree ID="main"><Sequence><SubTree ID="Sub"/></Sequence></BehaviorTree>
+  <TreeNodesModel><Action ID="MainAct"/></TreeNodesModel>
+</root>`
+  const subText = `<root BTCPP_format="4">
+  <TreeNodesModel><Action ID="SubAct"><input_port name="x"/></Action></TreeNodesModel>
+  <BehaviorTree ID="Sub"><Sequence><SubAct x="1"/></Sequence></BehaviorTree>
+</root>`
+  const parse = (s: string) => {
+    const l = loadSourceTree(s)
+    if ('error' in l) throw new Error(l.error)
+    return l.doc
+  }
+
+  it('renders a SubTree defined in an extra doc', () => {
+    const r = toLiveShape(parse(mainText), [{ fileKey: 'sub.xml', doc: parse(subText) }])
+    expect('error' in r).toBe(false)
+    if ('error' in r) return
+    expect(paths(r.doc)).toContain('Sub::1')
+  })
+
+  it('maps a uid from the extra doc to its file and own index', () => {
+    const extra = parse(subText)
+    const r = toLiveShape(parse(mainText), [{ fileKey: 'sub.xml', doc: extra }])
+    if ('error' in r) throw new Error(r.error)
+    const el = Array.from(r.doc.getElementsByTagName('SubAct'))[0]
+    const uid = el.getAttribute('_uid')!
+    expect(r.sourceFileByUid[uid]).toBe('sub.xml')
+    expect(Array.from(extra.getElementsByTagName('*'))[r.sourceIndexByUid[uid]].tagName).toBe('SubAct')
+    const mainUid = Array.from(r.doc.getElementsByTagName('Sequence'))[0].getAttribute('_uid')!
+    expect(r.sourceFileByUid[mainUid]).toBe('')
+  })
+
+  it('maps every uid to "" for a one-document call', () => {
+    const r = toLiveShape(parse(mainText.replace('<SubTree ID="Sub"/>', '<AlwaysSuccess/>')))
+    if ('error' in r) throw new Error('unexpected: ' + r.error)
+    expect(Object.keys(r.sourceFileByUid).sort()).toEqual(Object.keys(r.sourceIndexByUid).sort())
+    expect(new Set(Object.values(r.sourceFileByUid))).toEqual(new Set(['']))
+  })
+
+  it('keeps the model entries of the root doc and the extra docs', () => {
+    const r = toLiveShape(parse(mainText), [{ fileKey: 'sub.xml', doc: parse(subText) }])
+    if ('error' in r) throw new Error(r.error)
+    const ids = Array.from(r.doc.getElementsByTagName('TreeNodesModel')[0].children).map((c) => c.getAttribute('ID'))
+    expect(ids).toEqual(['MainAct', 'SubAct'])
+  })
+})

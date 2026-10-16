@@ -1,0 +1,6 @@
+<root BTCPP_format="4">
+  <include path="cycle_b.xml"/>
+  <BehaviorTree ID="CycleA">
+    <AlwaysSuccess/>
+  </BehaviorTree>
+</root>

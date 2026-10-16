@@ -60,6 +60,26 @@ pip install ".[qt]"
 evo-behavior-tree-monitor --window
 ```
 
+## File view
+
+Browse and edit behaviour tree files from the server's folders:
+
+```bash
+evo-behavior-tree-monitor --tree-dir path/to/config --edit-dir path/to/config
+```
+
+`--tree-dir` lists the files in the Open menu. `--edit-dir` (a folder inside a tree dir) marks the
+files that may be edited. Both are repeatable (env `EVO_BTM_TREE_DIRS`, `EVO_BTM_EDIT_DIRS`).
+
+A tree split over several files opens from its main file. Each `<include path="...">` is resolved
+against the folder of the including file, and the included files must be in a tree dir. An include
+with `ros_pkg`, a cycle, or a `<BehaviorTree ID>` defined twice is refused, with a notice that names
+the file. When a `<SubTree>` has no definition, the monitor looks in the main file's folder and then
+its parent, and adds the notice "Resolved <ID> from <file>".
+
+An edit is saved to the file that defines the node, not to the main file. After a save, the main
+file is read again.
+
 ## Project layout
 
 ```
