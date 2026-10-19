@@ -131,6 +131,7 @@ html, body {
   stroke: var(--status-failure); stroke-width: 2.5;
   filter: drop-shadow(0 0 6px var(--status-failure));
 }
+.node-group.is-faded .node-box { filter: none; opacity: 0.6; }
 .node-group.status-idle .node-box { stroke: var(--border-light); stroke-width: 1.5; }
 
 .node-icon { font-size: 12px; fill: var(--text-secondary); dominant-baseline: middle; }

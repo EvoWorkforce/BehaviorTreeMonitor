@@ -53,11 +53,11 @@ describe('tree views', () => {
     expect(live.nodeStatuses['stale_uid']).toBeUndefined()
   })
 
-  it('counts IDLE_FROM_SUCCESS as idle', () => {
+  it('counts IDLE_FROM_SUCCESS as success and IDLE_FROM_RUNNING as idle', () => {
     const live = useTreeStore()
     live.parseTree(xml('a'))
     live.clearStatuses()
-    live.updateStatus({ x: 'IDLE_FROM_SUCCESS', y: 'RUNNING' })
-    expect(live.stats).toEqual({ idle: 1, running: 1, success: 0, failure: 0 })
+    live.updateStatus({ x: 'IDLE_FROM_SUCCESS', y: 'RUNNING', z: 'IDLE_FROM_RUNNING' })
+    expect(live.stats).toEqual({ idle: 1, running: 1, success: 1, failure: 0 })
   })
 })

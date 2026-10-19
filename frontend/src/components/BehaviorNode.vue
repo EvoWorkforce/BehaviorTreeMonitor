@@ -101,7 +101,7 @@ import { useBlackboardStore } from '@/stores/blackboardStore'
 import { subtreeOpenPath } from '@/lib/instances'
 import { describeNull, resolvePortValue } from '@/lib/blackboard'
 import { summarize } from '@/lib/format'
-import { statusKind } from '@/lib/statusKind'
+import { statusKind, isFaded } from '@/lib/statusKind'
 import { useActiveTree, useViewStore } from '@/stores/viewStore'
 import { getNodePorts, getNodeHeight, measureTextWidth } from '@/stores/treeStore'
 
@@ -141,7 +141,7 @@ const ports = computed<NodePort[]>(() => getNodePorts(props.node))
 
 const status = computed(() => store.value.nodeStatuses[props.node.uid] ?? 'IDLE')
 
-const statusClass = computed(() => `status-${statusKind(status.value)}`)
+const statusClass = computed(() => [`status-${statusKind(status.value)}`, { 'is-faded': isFaded(status.value) }])
 
 const typeClass = computed(() => `type-${props.node.type}`)
 
