@@ -101,3 +101,41 @@ export function siblingCandidates(rootPath: string, files: TreeFileInfo[]): Tree
   const inDir = (d: string) => files.filter((f) => f.path !== rootPath && dirname(f.path) === d)
   return dir === '' ? inDir(dir) : [...inDir(dir), ...inDir(parent)]
 }
+
+/**
+ * Add sibling files that define still-missing SubTree IDs. Repeats passes until one adds nothing,
+ * so the order of the candidates does not matter. Returns only the added sources, plus one
+ * "Resolved <ID> from <path>" note per resolved ID.
+ */
+export async function resolveFromSiblings(
+  rootPath: string,
+  files: TreeFileInfo[],
+  sources: SourceFile[],
+  read: (id: string) => Promise<{ text: string; sha256: string }>,
+): Promise<{ sources: SourceFile[]; notes: string[] }> {
+  const all = [...sources]
+  const added: SourceFile[] = []
+  const notes: string[] = []
+  let missing = missingSubtreeIds(all.map((f) => f.doc))
+  let grew = true
+  while (grew && missing.length) {
+    grew = false
+    for (const cand of siblingCandidates(rootPath, files)) {
+      if (!missing.length) break
+      if (all.some((f) => f.info.path === cand.path)) continue
+      const got = await read(cand.id)
+      const loaded = loadSourceTree(got.text)
+      if ('error' in loaded) continue
+      const defined = Array.from(loaded.doc.getElementsByTagName('BehaviorTree')).map((e) => e.getAttribute('ID') ?? '')
+      const found = missing.filter((id) => defined.includes(id))
+      if (!found.length) continue
+      const file: SourceFile = { info: cand, text: got.text, sha256: got.sha256, doc: loaded.doc }
+      all.push(file)
+      added.push(file)
+      grew = true
+      for (const id of found) notes.push(`Resolved ${id} from ${cand.path}`)
+      missing = missingSubtreeIds(all.map((f) => f.doc))
+    }
+  }
+  return { sources: added, notes }
+}

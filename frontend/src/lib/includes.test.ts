@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { resolveIncludePath, collectIncludedSources, missingSubtreeIds, siblingCandidates, type SourceFile } from './includes'
+import { resolveIncludePath, collectIncludedSources, missingSubtreeIds, siblingCandidates, resolveFromSiblings, type SourceFile } from './includes'
 import { loadSourceTree } from './source'
 import type { TreeFileInfo } from './treeFiles'
 import mainXml from './__fixtures__/split/main_bt.xml?raw'
@@ -129,5 +129,36 @@ describe('siblingCandidates', () => {
   it('orders same-folder files before parent-folder files and excludes the root', () => {
     const all = ['/t/p/root.xml', '/t/p/a.xml', '/t/b.xml', '/t/p/sub/c.xml', '/x/d.xml', '/t/p/z.xml'].map(f)
     expect(siblingCandidates('/t/p/root.xml', all).map((x) => x.path)).toEqual(['/t/p/a.xml', '/t/p/z.xml', '/t/b.xml'])
+  })
+})
+
+describe('resolveFromSiblings', () => {
+  const tree = (id: string, body: string) => `<root BTCPP_format="4"><BehaviorTree ID="${id}">${body}</BehaviorTree></root>`
+  const rootXml = '<root BTCPP_format="4" main_tree_to_execute="M"><BehaviorTree ID="M"><SubTree ID="A"/></BehaviorTree></root>'
+
+  it('resolves a chain whose definitions sit in reverse file order', async () => {
+    const t: Record<string, string> = {
+      '/s/root.xml': rootXml,
+      '/s/a.xml': tree('B', '<AlwaysSuccess/>'),
+      '/s/z.xml': tree('A', '<SubTree ID="B"/>'),
+    }
+    const fs = Object.keys(t).map(info)
+    const read = async (id: string) => ({ text: t[id], sha256: 'sha-' + id })
+    const r = await resolveFromSiblings('/s/root.xml', fs, [rootOf('/s/root.xml', rootXml)], read)
+    expect(r.sources.map((x) => x.info.path).sort()).toEqual(['/s/a.xml', '/s/z.xml'])
+    expect(r.notes).toContain('Resolved A from /s/z.xml')
+    expect(r.notes).toContain('Resolved B from /s/a.xml')
+  })
+
+  it('terminates and returns when an ID stays missing', async () => {
+    const t: Record<string, string> = {
+      '/s/root.xml': rootXml,
+      '/s/a.xml': tree('A', '<SubTree ID="Nope"/>'),
+    }
+    const fs = Object.keys(t).map(info)
+    const read = async (id: string) => ({ text: t[id], sha256: 'sha-' + id })
+    const r = await resolveFromSiblings('/s/root.xml', fs, [rootOf('/s/root.xml', rootXml)], read)
+    expect(r.sources.map((x) => x.info.path)).toEqual(['/s/a.xml'])
+    expect(r.notes).toEqual(['Resolved A from /s/a.xml'])
   })
 })

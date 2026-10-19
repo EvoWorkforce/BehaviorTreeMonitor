@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { loadSourceTree } from '../lib/source'
 import { toLiveShape, type ExtraDoc } from '../lib/liveShape'
-import { collectIncludedSources, missingSubtreeIds, siblingCandidates, type SourceFile } from '../lib/includes'
+import { collectIncludedSources, resolveFromSiblings, type SourceFile } from '../lib/includes'
 import { planAttributeSave, type OpenSource } from '../lib/sourceSave'
 import { listTrees, readTree, saveTree } from '../lib/treeApi'
 import type { EditRow } from '../lib/editRows'
@@ -89,22 +89,9 @@ export const useFileSourceStore = defineStore('fileSource', () => {
         notice.value = collected.error
         return false
       }
-      const all = [...collected.sources]
-      const notes: string[] = []
-      let missing = missingSubtreeIds(all.map((f) => f.doc))
-      for (const cand of siblingCandidates(info.path, files.value)) {
-        if (!missing.length) break
-        if (all.some((f) => f.info.path === cand.path)) continue
-        const got = await readTree(cand.id)
-        const candLoaded = loadSourceTree(got.text)
-        if ('error' in candLoaded) continue
-        const defined = Array.from(candLoaded.doc.getElementsByTagName('BehaviorTree')).map((e) => e.getAttribute('ID') ?? '')
-        const found = missing.filter((id) => defined.includes(id))
-        if (!found.length) continue
-        all.push({ info: cand, text: got.text, sha256: got.sha256, doc: candLoaded.doc })
-        for (const id of found) notes.push(`Resolved ${id} from ${cand.path}`)
-        missing = missingSubtreeIds(all.map((f) => f.doc))
-      }
+      const resolved = await resolveFromSiblings(info.path, files.value, collected.sources, readTree)
+      const all = [...collected.sources, ...resolved.sources]
+      const notes = resolved.notes
       const open: Record<string, OpenSource> = {}
       const extras: ExtraDoc[] = []
       for (const f of all) {
