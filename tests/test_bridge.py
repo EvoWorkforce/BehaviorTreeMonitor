@@ -161,3 +161,22 @@ async def test_cleanup_sends_record_stop_while_in_flight(bridge, fake):
     await _start_recording_with_slow_transitions(bridge, fake)
     await bridge.cleanup()
     assert b"stop" in [p for t, p in fake.requests if t == "r"]
+
+
+async def test_new_connection_replaces_source(bridge, fake):
+    other = FakeGroot2()
+    await other.start()
+    try:
+        assert bridge.connected
+        bridge.start_polling()
+        assert await bridge.connect_zmq("127.0.0.1", other.port)
+        assert bridge.zmq_port == other.port
+        msg = bridge.connection_message()
+        assert msg["connected"] and msg["port"] == other.port and msg["tree_xml"]
+        # A failed connect leaves no source active: the old one is not kept.
+        assert not await bridge.connect_zmq("127.0.0.1", 1)
+        assert not bridge.connected and bridge.tree_xml is None
+        assert bridge.status_poll_task is None
+        assert bridge.connection_message()["tree_xml"] is None
+    finally:
+        await other.stop()

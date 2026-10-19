@@ -42,6 +42,7 @@
 </template>
 
 <script setup lang="ts">
+import { statusKind } from '@/lib/statusKind'
 import PanelClose from './PanelClose.vue'
 import { computed, ref, watch } from 'vue'
 import { ROOT_KEY, collapsedToLevels, maxDepth, visibleRows, type InstanceNode } from '@/lib/instances'
@@ -96,10 +97,6 @@ function label(n: InstanceNode): string {
 
 function statusClass(n: InstanceNode): string {
   if (!n.subtreeUid) return 'idle'
-  const s = (props.statuses[n.subtreeUid] ?? 'IDLE').toLowerCase()
-  if (s.includes('running')) return 'running'
-  if (s.includes('success')) return 'success'
-  if (s.includes('failure')) return 'failure'
-  return 'idle'
+  return statusKind(props.statuses[n.subtreeUid])
 }
 </script>

@@ -11,6 +11,7 @@ import { buildInstanceTree } from '@/lib/instances'
 import type { InstanceNode } from '@/lib/instances'
 import { buildUidPaths } from '@/lib/timeline'
 import type { UidInfo } from '@/lib/timeline'
+import { statusKind } from '@/lib/statusKind'
 
 export { measureTextWidth, getNodePorts, getNodeHeight } from '@/lib/parse'
 
@@ -33,11 +34,7 @@ export function defineTreeView(id: string) {
   const stats = computed(() => {
     const r = { idle: 0, running: 0, success: 0, failure: 0 }
     for (const s of Object.values(nodeStatuses)) {
-      const lower = s.toLowerCase()
-      if (lower.includes('running')) r.running++
-      else if (lower.includes('success')) r.success++
-      else if (lower.includes('failure')) r.failure++
-      else r.idle++
+      r[statusKind(s)]++
     }
     return r
   })
@@ -57,7 +54,13 @@ export function defineTreeView(id: string) {
     if (!(uid in nodeStatuses)) nodeStatuses[uid] = 'IDLE'
   }
 
+  /** Forget every node status; a new tree or source must not inherit the old one's colours. */
+  function clearStatuses() {
+    for (const k of Object.keys(nodeStatuses)) delete nodeStatuses[k]
+  }
+
   function parseTree(source: string | Document) {
+    clearStatuses()
     const doc = typeof source === 'string' ? new DOMParser().parseFromString(source, 'text/xml') : source
 
     // Extract the node type map from TreeNodesModel
@@ -173,11 +176,10 @@ export function defineTreeView(id: string) {
 
   function statusScore(status?: string): number {
     if (!status) return 0
-    const s = status.toLowerCase()
-    if (s.includes('running')) return 5
-    if (s.includes('success') || s.includes('failure')) return 3
-    if (s.includes('idle')) return 1
-    return 0
+    const kind = statusKind(status)
+    if (kind === 'running') return 5
+    if (kind === 'idle') return 1
+    return 3
   }
 
   function behaviorTreeScore(btElement: Element): number {
@@ -244,7 +246,7 @@ export function defineTreeView(id: string) {
   return {
     horizontal,
     treeData, ownUids, nodeStatuses, stats, instances, selectedPath, uidInfo,
-    parseTree, selectInstance, updateStatus, toggleLayout, toggleSubtree,
+    parseTree, clearStatuses, selectInstance, updateStatus, toggleLayout, toggleSubtree,
     NODE_BASE_HEIGHT,
     PORT_HEIGHT,
   }

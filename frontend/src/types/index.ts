@@ -53,10 +53,12 @@ export interface TreeNode {
 export interface WsMessage {
   type: string
   connected?: boolean
+  host?: string
+  port?: number
   tree_xml?: string | null
   tree_uuid?: string | null
   data?: Record<string, string> | string | null
-  message?: string
+  message?: string | null
   active?: boolean
   start_epoch_us?: number
 }

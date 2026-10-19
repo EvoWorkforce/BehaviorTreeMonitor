@@ -44,6 +44,7 @@ class Groot2WebBridge:
         self.start_epoch_us: int = 0
         self._last_error: Optional[str] = None
         self._lock = asyncio.Lock()
+        self._connect_lock = asyncio.Lock()
 
     @staticmethod
     def normalize_host_port(host: str, port: int) -> tuple[str, int]:
@@ -88,6 +89,12 @@ class Groot2WebBridge:
             return f"TCP check failed {host}:{port} ({e})"
 
     async def connect_zmq(self, host: str, port: int) -> bool:
+        """Connect to one publisher. The previous source is dropped first: only one is ever active."""
+        async with self._connect_lock:
+            await self.disconnect_zmq()
+            return await self._connect_zmq(host, port)
+
+    async def _connect_zmq(self, host: str, port: int) -> bool:
         self.zmq_host, self.zmq_port = self.normalize_host_port(host, port)
         self.last_error = None
         try:
@@ -137,6 +144,7 @@ class Groot2WebBridge:
         self.connected = False
         self.tree_xml = None
         self.tree_uuid = None
+        self._last_error = None
         logger.info("ZeroMQ disconnected")
 
     async def _send_request(self, request_type: int, payload: bytes = b'') -> Optional[list]:
@@ -244,6 +252,18 @@ class Groot2WebBridge:
             'active': self.recording,
             'start_epoch_us': self.start_epoch_us,
         })
+
+    def connection_message(self, message: Optional[str] = None) -> dict:
+        """The connection_status message for the current source."""
+        return {
+            'type': 'connection_status',
+            'connected': self.connected,
+            'host': self.zmq_host,
+            'port': self.zmq_port,
+            'tree_xml': self.tree_xml if self.connected else None,
+            'tree_uuid': self.tree_uuid if self.connected else None,
+            'message': message,
+        }
 
     async def broadcast(self, message: dict):
         if not self.websockets:
@@ -354,12 +374,7 @@ async def _ws_handler(request: web.Request) -> web.WebSocketResponse:
     logger.info(f"WebSocket connected: {request.remote}")
     bridge.websockets.add(ws)
     try:
-        await ws.send_json({
-            'type': 'connection_status',
-            'connected': bridge.connected,
-            'tree_xml': bridge.tree_xml if bridge.connected else None,
-            'tree_uuid': bridge.tree_uuid if bridge.connected else None,
-        })
+        await ws.send_json(bridge.connection_message())
         async for msg in ws:
             if msg.type == aiohttp.WSMsgType.TEXT:
                 try:
@@ -385,19 +400,15 @@ async def _handle_ws_message(ws: web.WebSocketResponse, data: dict):
         host = data.get('host', 'localhost')
         port = data.get('port', 1667)
         success = await bridge.connect_zmq(host, port)
-        await ws.send_json({
-            'type': 'connection_status',
-            'connected': success,
-            'tree_xml': bridge.tree_xml if success else None,
-            'tree_uuid': bridge.tree_uuid if success else None,
-            'message': None if success else (bridge.last_error or f"Cannot connect to {host}:{port}"),
-        })
+        # One source serves every client: all of them get the new state, so none keeps stale statuses.
+        await bridge.broadcast(bridge.connection_message(
+            message=None if success else (bridge.last_error or f"Cannot connect to {host}:{port}")))
         if success:
             bridge.start_polling()
 
     elif msg_type == 'disconnect':
         await bridge.disconnect_zmq()
-        await ws.send_json({'type': 'connection_status', 'connected': False})
+        await bridge.broadcast(bridge.connection_message())
 
     elif msg_type == 'get_tree':
         if bridge.connected:

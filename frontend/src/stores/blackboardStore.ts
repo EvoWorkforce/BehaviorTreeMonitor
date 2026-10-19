@@ -61,6 +61,12 @@ export const useBlackboardStore = defineStore('blackboard', () => {
     }
   }
 
+  /** Drop the values of the previous source. */
+  function clear() {
+    maps.value = {}
+    clearFlash()
+  }
+
   function setPortTypes(types: Record<string, string>) {
     portTypes.value = types
   }
@@ -87,6 +93,6 @@ export const useBlackboardStore = defineStore('blackboard', () => {
 
   return {
     maps, target, filter, pinned, portTypes, flashing, current, rows,
-    setTarget, update, setPortTypes, togglePin,
+    setTarget, update, clear, setPortTypes, togglePin,
   }
 })

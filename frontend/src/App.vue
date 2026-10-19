@@ -153,6 +153,13 @@ function handleMessage(msg: WsMessage) {
     case 'connection_status':
       conn.connected = !!msg.connected
       conn.connecting = false
+      // The server has one source for all clients; follow it, whoever changed it.
+      if (typeof msg.host === 'string') conn.host = msg.host
+      if (typeof msg.port === 'number') conn.port = msg.port
+      if (!msg.connected) {
+        live.clearStatuses()
+        bb.clear()
+      }
       if (msg.connected) {
         connectionError.value = ''
       } else if (msg.message) {

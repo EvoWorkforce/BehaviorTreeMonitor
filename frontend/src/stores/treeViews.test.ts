@@ -44,4 +44,20 @@ describe('tree views', () => {
     useTreeStore().parseTree(xml('still_live'))
     expect(useTreeStore().treeData?.name).toBe('still_live')
   })
+
+  it('a new tree clears the statuses of the previous source', () => {
+    const live = useTreeStore()
+    live.parseTree(xml('a'))
+    live.updateStatus({ stale_uid: 'RUNNING' })
+    live.parseTree(xml('b'))
+    expect(live.nodeStatuses['stale_uid']).toBeUndefined()
+  })
+
+  it('counts IDLE_FROM_SUCCESS as idle', () => {
+    const live = useTreeStore()
+    live.parseTree(xml('a'))
+    live.clearStatuses()
+    live.updateStatus({ x: 'IDLE_FROM_SUCCESS', y: 'RUNNING' })
+    expect(live.stats).toEqual({ idle: 1, running: 1, success: 0, failure: 0 })
+  })
 })
